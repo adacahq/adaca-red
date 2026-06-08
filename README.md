@@ -191,8 +191,15 @@ docs/                     # design system + implementation/dashboard plans
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and conventions. `main`
+is protected — changes land via pull request once CI (build + lint) passes.
+
 ## Support
 
 Questions or issues: [support@adaca.com](mailto:support@adaca.com).
 
-© Adaca. All rights reserved.
+## Licence
+
+[MIT](LICENSE) © 2026 Adaca.
