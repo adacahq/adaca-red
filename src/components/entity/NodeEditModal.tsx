@@ -4,18 +4,28 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
 import FieldInput, { type FieldValueT } from '@/components/fields/FieldInput';
 import { fieldsToZod } from '@/lib/definitions/zod';
 import { saveNode } from '@/lib/nodes/actions';
 import type { FieldDef, NodeRow } from '@/lib/supabase/types';
 
-/** Full-field node editor in a modal (used for tasks/groups in the tree). */
+export interface ParentOption {
+  value: string;
+  label: string;
+  /** Position to use when moving into this parent (append to its children). */
+  position: number;
+}
+
+/** Full-field node editor in a modal (used for tasks/groups in the tree).
+ *  When `parentOptions` is supplied the node can also be re-parented (move). */
 export default function NodeEditModal({
   open,
   onClose,
   node,
   fields,
   typeLabel,
+  parentOptions,
   revalidatePath,
 }: {
   open: boolean;
@@ -23,10 +33,13 @@ export default function NodeEditModal({
   node: NodeRow;
   fields: FieldDef[];
   typeLabel: string;
+  parentOptions?: ParentOption[];
   revalidatePath: string;
 }) {
   const ordered = [...fields].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const data = (node.data ?? {}) as Record<string, unknown>;
+  const [parentId, setParentId] = useState<string>(node.parent_id ?? '');
+  const canMove = !!parentOptions && parentOptions.length > 1;
 
   const [values, setValues] = useState<Record<string, FieldValueT>>(() => {
     const v: Record<string, FieldValueT> = {};
@@ -59,14 +72,18 @@ export default function NodeEditModal({
       if (v === undefined || v === null) continue;
       clean[k] = v instanceof Date ? v.toISOString().slice(0, 10) : v;
     }
+    const moving = canMove && parentId !== (node.parent_id ?? '');
+    const appendPos = parentOptions?.find((p) => p.value === parentId)?.position;
     startTransition(async () => {
       try {
         await saveNode({
           id: node.id,
           type: node.type_key,
-          parent: node.parent_id,
+          parent: canMove ? parentId : node.parent_id,
           data: clean,
-          changeNote: 'edited',
+          // Append to the new parent on a move; preserve position on a plain edit.
+          position: moving ? appendPos ?? 0 : undefined,
+          changeNote: moving ? 'moved' : 'edited',
           revalidate: revalidatePath,
         });
         router.refresh();
@@ -102,6 +119,18 @@ export default function NodeEditModal({
         </div>
       )}
       <div className="flex flex-col gap-5">
+        {canMove && (
+          <div>
+            <label className="field-label">Parent</label>
+            <Select
+              fullWidth
+              value={parentId}
+              onChange={setParentId}
+              options={(parentOptions ?? []).map((p) => ({ value: p.value, label: p.label }))}
+              ariaLabel="Parent"
+            />
+          </div>
+        )}
         {ordered.map((f) => (
           <div key={f.key}>
             <label className="field-label" htmlFor={`f-${f.key}`}>
