@@ -1,7 +1,9 @@
 /** Shared types for the customisable dashboard. */
 
-export type Source = 'initiative' | 'risk' | 'incident';
-export const SOURCES: Source[] = ['initiative', 'risk', 'incident'];
+/** Any node type key can be a widget source; the aggregation engine is generic
+ *  over node types (it just reads the definition + listNodes). The home page
+ *  builds the offered list from the definitions registry. */
+export type Source = string;
 
 export type WidgetType =
   | 'kpi'

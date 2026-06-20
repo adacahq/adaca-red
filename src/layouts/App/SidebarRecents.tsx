@@ -2,23 +2,22 @@
 
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
-import type { ComponentType, SVGProps } from 'react';
-import { RocketLaunchIcon, ShieldExclamationIcon, FireIcon } from '@heroicons/react/24/outline';
 import {
   subscribeRecents,
   getRecentsSnapshot,
   getRecentsServerSnapshot,
   clearRecents,
-  type RecentType,
 } from '@/lib/recents';
+import { routeFor } from '@/lib/nodes/routes';
+import { iconFor } from '@/lib/views/icons';
 
-const META: Record<RecentType, { base: string; icon: ComponentType<SVGProps<SVGSVGElement>> }> = {
-  initiative: { base: '/initiatives', icon: RocketLaunchIcon },
-  risk: { base: '/risks', icon: ShieldExclamationIcon },
-  incident: { base: '/incidents', icon: FireIcon },
-};
-
-export default function SidebarRecents({ onNavigate }: { onNavigate?: () => void }) {
+export default function SidebarRecents({
+  typeIcons,
+  onNavigate,
+}: {
+  typeIcons: Record<string, string>;
+  onNavigate?: () => void;
+}) {
   const recents = useSyncExternalStore(subscribeRecents, getRecentsSnapshot, getRecentsServerSnapshot);
 
   return (
@@ -51,11 +50,11 @@ export default function SidebarRecents({ onNavigate }: { onNavigate?: () => void
       ) : (
         <ul role="list" className="flex flex-col gap-0.5">
           {recents.map((r) => {
-            const Icon = META[r.type].icon;
+            const Icon = iconFor(typeIcons[r.type]);
             return (
               <li key={`${r.type}:${r.id}`}>
                 <Link
-                  href={`${META[r.type].base}/${r.id}`}
+                  href={`${routeFor(r.type)}/${r.id}`}
                   onClick={onNavigate}
                   className="nav-link group flex items-center gap-x-2.5 py-[7px]"
                   style={{ paddingLeft: 18, paddingRight: 10, color: 'var(--muted)' }}

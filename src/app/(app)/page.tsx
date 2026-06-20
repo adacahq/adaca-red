@@ -1,25 +1,26 @@
 import { createClient } from '@/lib/supabase/server';
-import { getDefinition, fieldsOf } from '@/lib/definitions/server';
+import { loadDefinitions, fieldsOf } from '@/lib/definitions/server';
 import { loadDashboard } from '@/lib/dashboard/actions';
-import type { Source, SourceMeta } from '@/lib/dashboard/types';
+import type { SourceMeta } from '@/lib/dashboard/types';
 import DashboardGrid from '@/components/dashboard/DashboardGrid';
+
+// Display order for the source picker; the primary domain types lead, every
+// other node type follows alphabetically. Ordering only — nothing is excluded,
+// so a new node type shows up as a dashboard source automatically.
+const SOURCE_ORDER = ['initiative', 'risk', 'incident', 'task', 'milestone', 'dependency', 'status_report'];
 
 export default async function Dashboard() {
   const supabase = await createClient();
-  const [layout, dInitiative, dRisk, dIncident] = await Promise.all([
-    loadDashboard(),
-    getDefinition(supabase, 'initiative'),
-    getDefinition(supabase, 'risk'),
-    getDefinition(supabase, 'incident'),
-  ]);
+  const [layout, defs] = await Promise.all([loadDashboard(), loadDefinitions(supabase)]);
 
-  const defs: Record<Source, typeof dRisk> = { initiative: dInitiative, risk: dRisk, incident: dIncident };
-  const labels: Record<Source, string> = { initiative: 'Initiative', risk: 'Risk', incident: 'Incident' };
-  const sources: SourceMeta[] = (['initiative', 'risk', 'incident'] as Source[]).map((key) => ({
-    key,
-    label: defs[key]?.label ?? labels[key],
-    fields: defs[key] ? fieldsOf(defs[key]!) : [],
-  }));
+  const rank = (k: string) => {
+    const i = SOURCE_ORDER.indexOf(k);
+    return i === -1 ? SOURCE_ORDER.length : i;
+  };
+  const sources: SourceMeta[] = Object.values(defs)
+    .filter((d) => d.kind === 'node')
+    .sort((a, b) => rank(a.key) - rank(b.key) || a.label.localeCompare(b.label))
+    .map((d) => ({ key: d.key, label: d.label, fields: fieldsOf(d) }));
 
   return (
     <div>

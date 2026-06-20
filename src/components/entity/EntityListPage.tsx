@@ -1,19 +1,12 @@
 import Link from 'next/link';
-import type { ComponentType, SVGProps } from 'react';
 import { PlusIcon } from '@heroicons/react/20/solid';
-import { RocketLaunchIcon, ShieldExclamationIcon, FireIcon } from '@heroicons/react/24/outline';
 import { createClient } from '@/lib/supabase/server';
-import { getDefinition, filterableFields, fieldsOf } from '@/lib/definitions/server';
+import { getDefinition, filterableFields, fieldsOf, nodeConfig } from '@/lib/definitions/server';
 import { listNodes } from '@/lib/nodes/queries';
+import { iconFor } from '@/lib/views/icons';
 import FilterBar from './FilterBar';
 import Register from './Register';
 import ExportButton from './ExportButton';
-
-const TYPE_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
-  initiative: RocketLaunchIcon,
-  risk: ShieldExclamationIcon,
-  incident: FireIcon,
-};
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -72,7 +65,7 @@ export default async function EntityListPage({
           columns={cols}
           basePath={basePath}
           entityLabel={def.label}
-          icon={TYPE_ICONS[typeKey]}
+          icon={iconFor(nodeConfig(def).icon)}
         />
       </div>
     </div>

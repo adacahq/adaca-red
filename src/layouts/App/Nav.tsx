@@ -2,23 +2,13 @@
 
 import Link from 'next/link';
 import type { ComponentType, SVGProps } from 'react';
-import {
-  HomeIcon,
-  RocketLaunchIcon,
-  ShieldExclamationIcon,
-  FireIcon,
-  Cog6ToothIcon,
-} from '@heroicons/react/24/outline';
+import { HomeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { iconFor } from '@/lib/views/icons';
+import type { RegisterItem } from './index';
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
 interface Leaf { name: string; href: string }
-interface IconLeaf extends Leaf { icon: Icon }
 
-const REGISTER: IconLeaf[] = [
-  { name: 'Initiatives', href: '/initiatives', icon: RocketLaunchIcon },
-  { name: 'Risks', href: '/risks', icon: ShieldExclamationIcon },
-  { name: 'Incidents', href: '/incidents', icon: FireIcon },
-];
 const REPORTS: Leaf[] = [
   { name: 'Risk matrix', href: '/reports/risk-matrix' },
   { name: 'RED coverage', href: '/reports/red-coverage' },
@@ -57,11 +47,10 @@ function SectionLabel({ children, href }: { children: React.ReactNode; href?: st
   );
 }
 
-function IconItem({ item, active, onNavigate }: { item: IconLeaf; active: boolean; onNavigate?: () => void }) {
-  const Icon = item.icon;
+function IconItem({ name, href, Icon, active, onNavigate }: { name: string; href: string; Icon: Icon; active: boolean; onNavigate?: () => void }) {
   return (
     <Link
-      href={item.href}
+      href={href}
       onClick={onNavigate}
       data-active={active || undefined}
       className="nav-link group relative flex items-center gap-x-3 py-[9px]"
@@ -82,7 +71,7 @@ function IconItem({ item, active, onNavigate }: { item: IconLeaf; active: boolea
       />
       <Icon className="h-4 w-4 shrink-0" style={{ color: active ? 'var(--accent)' : undefined }} aria-hidden />
       <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: active ? 500 : 400, flex: 1 }}>
-        {item.name}
+        {name}
       </span>
     </Link>
   );
@@ -116,11 +105,13 @@ function SubItem({ item, active, onNavigate }: { item: Leaf; active: boolean; on
 export default function Nav({
   pathname,
   isAdmin,
+  register = [],
   onNavigate,
   recentsSlot,
 }: {
   pathname: string;
   isAdmin: boolean;
+  register?: RegisterItem[];
   onNavigate?: () => void;
   recentsSlot?: React.ReactNode;
 }) {
@@ -128,20 +119,22 @@ export default function Nav({
     <nav className="flex flex-1 flex-col px-2 pb-6 pt-3">
       <ul role="list" className="flex flex-col gap-0.5">
         <li>
-          <IconItem item={{ name: 'Dashboard', href: '/', icon: HomeIcon }} active={pathname === '/'} onNavigate={onNavigate} />
+          <IconItem name="Dashboard" href="/" Icon={HomeIcon} active={pathname === '/'} onNavigate={onNavigate} />
         </li>
       </ul>
 
-      <div className="mt-5">
-        <SectionLabel>Register</SectionLabel>
-        <ul role="list" className="flex flex-col gap-0.5">
-          {REGISTER.map((item) => (
-            <li key={item.href}>
-              <IconItem item={item} active={startsWith(pathname, item.href)} onNavigate={onNavigate} />
-            </li>
-          ))}
-        </ul>
-      </div>
+      {register.length > 0 && (
+        <div className="mt-5">
+          <SectionLabel>Register</SectionLabel>
+          <ul role="list" className="flex flex-col gap-0.5">
+            {register.map((item) => (
+              <li key={item.href}>
+                <IconItem name={item.name} href={item.href} Icon={iconFor(item.icon)} active={startsWith(pathname, item.href)} onNavigate={onNavigate} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-5">
         <SectionLabel href="/reports">Reports</SectionLabel>

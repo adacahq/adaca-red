@@ -3,7 +3,8 @@
  * the sidebar can subscribe via useSyncExternalStore (no setState-in-effect),
  * and detail pages can record visits. Most-recent first, de-duplicated by id.
  */
-export type RecentType = 'initiative' | 'risk' | 'incident';
+/** Any node type key — recents track every type now that all have detail pages. */
+export type RecentType = string;
 
 export interface RecentEntry {
   type: RecentType;

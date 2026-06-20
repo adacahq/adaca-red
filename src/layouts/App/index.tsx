@@ -20,13 +20,19 @@ export interface AppUser {
   role: string;
 }
 
+export interface RegisterItem { name: string; href: string; icon?: string }
+
 function SidebarInner({
   pathname,
   isAdmin,
+  register,
+  typeIcons,
   onNavigate,
 }: {
   pathname: string;
   isAdmin: boolean;
+  register: RegisterItem[];
+  typeIcons: Record<string, string>;
   onNavigate?: () => void;
 }) {
   return (
@@ -49,8 +55,9 @@ function SidebarInner({
       <Nav
         pathname={pathname}
         isAdmin={isAdmin}
+        register={register}
         onNavigate={onNavigate}
-        recentsSlot={<SidebarRecents onNavigate={onNavigate} />}
+        recentsSlot={<SidebarRecents typeIcons={typeIcons} onNavigate={onNavigate} />}
       />
     </div>
   );
@@ -60,11 +67,15 @@ export default function AppShell({
   user,
   isAdmin,
   choiceMeta,
+  register = [],
+  typeIcons = {},
   children,
 }: {
   user: AppUser;
   isAdmin: boolean;
   choiceMeta: ChoiceMeta;
+  register?: RegisterItem[];
+  typeIcons?: Record<string, string>;
   children: ReactNode;
 }) {
   const pathname = usePathname() ?? '/';
@@ -114,7 +125,7 @@ export default function AppShell({
                     </button>
                   </div>
                 </Transition.Child>
-                <SidebarInner pathname={pathname} isAdmin={isAdmin} onNavigate={() => setOpen(false)} />
+                <SidebarInner pathname={pathname} isAdmin={isAdmin} register={register} typeIcons={typeIcons} onNavigate={() => setOpen(false)} />
               </Dialog.Panel>
             </Transition.Child>
           </div>
@@ -123,7 +134,7 @@ export default function AppShell({
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-10 lg:flex lg:w-72 lg:flex-col">
-        <SidebarInner pathname={pathname} isAdmin={isAdmin} />
+        <SidebarInner pathname={pathname} isAdmin={isAdmin} register={register} typeIcons={typeIcons} />
       </div>
 
       <div className="lg:pl-72">

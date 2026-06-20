@@ -7,9 +7,6 @@ import DeleteNodeButton from './DeleteNodeButton';
 import EditNodeButton from './EditNodeButton';
 import { Tabs, type TabDef } from '@/components/ui/Tabs';
 import RecentsTracker from '@/components/recents/RecentsTracker';
-import type { RecentType } from '@/lib/recents';
-
-const RECENT_TYPES: RecentType[] = ['initiative', 'risk', 'incident'];
 
 /**
  * Shared detail scaffold: header (type + status chips + title + modal Edit +
@@ -40,9 +37,7 @@ export default async function NodeShell({
 
   return (
     <div className="">
-      {RECENT_TYPES.includes(typeKey as RecentType) && (
-        <RecentsTracker type={typeKey as RecentType} id={id} title={title} />
-      )}
+      <RecentsTracker type={typeKey} id={id} title={title} />
       <div className="mb-3 flex items-center gap-3">
         <span
           className="mono"

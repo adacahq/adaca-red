@@ -11,66 +11,78 @@ import NodeEditModal from '@/components/entity/NodeEditModal';
 
 const ALL = '__all__';
 
-interface Task {
+interface Item {
   id: string;
   title: string;
-  status: string;
+  /** Value of the groupBy field (the column the card sits in). */
+  group: string;
   parentId: string;
   data: Record<string, unknown>;
 }
 interface Container { id: string; label: string; dividerBefore?: boolean }
 
+/**
+ * Generic Kanban: groups a child node type's nodes into columns by an enum
+ * field (`groupBy`), draggable between columns (writes the field) and reorderable
+ * (writes `position`). Nothing here is bound to a specific node type — the type,
+ * the grouping field and the column set all arrive as props.
+ */
 export default function KanbanBoard({
-  initiativeId,
+  rootId,
+  childType,
+  typeLabel,
+  groupBy,
   containers,
-  tasks,
-  statuses,
-  taskFields,
+  items,
+  columns: groups,
+  fields,
   revalidatePath,
 }: {
-  initiativeId: string;
+  rootId: string;
+  childType: string;
+  typeLabel: string;
+  groupBy: string;
   containers: Container[];
-  tasks: Task[];
-  statuses: string[];
-  taskFields: FieldDef[];
+  items: Item[];
+  columns: string[];
+  fields: FieldDef[];
   revalidatePath: string;
 }) {
   const router = useRouter();
   const [container, setContainer] = useState(containers[0]?.id ?? ALL);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  // Manual order of all task ids; persisted to `position` (also drives the Tasks list).
-  const [order, setOrder] = useState<string[]>(() => tasks.map((t) => t.id));
+  // Manual order of all item ids; persisted to `position`.
+  const [order, setOrder] = useState<string[]>(() => items.map((t) => t.id));
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<{ col: string; index: number } | null>(null);
-  const [edit, setEdit] = useState<Task | null>(null);
+  const [edit, setEdit] = useState<Item | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [addTitle, setAddTitle] = useState('');
   const [, startTransition] = useTransition();
 
-  // Re-sync to server order whenever the task set or its order changes (e.g. after
-  // a save + refresh). Render-phase adjustment, guarded — no effect needed.
-  const propIds = tasks.map((t) => t.id).join(',');
+  // Re-sync to server order whenever the item set or its order changes.
+  const propIds = items.map((t) => t.id).join(',');
   const [syncedIds, setSyncedIds] = useState(propIds);
   if (propIds !== syncedIds) {
     setSyncedIds(propIds);
-    setOrder(tasks.map((t) => t.id));
+    setOrder(items.map((t) => t.id));
     setOverrides({});
   }
 
-  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const byId = new Map(items.map((t) => [t.id, t]));
   const orderIdx = new Map(order.map((id, i) => [id, i]));
   const oi = (id: string) => orderIdx.get(id) ?? 0;
 
-  const addParent = container === ALL ? initiativeId : container;
+  const addParent = container === ALL ? rootId : container;
   const labelByContainer = Object.fromEntries(containers.map((c) => [c.id, c.label]));
-  const containerTag = (t: Task) =>
-    container === ALL && t.parentId !== initiativeId ? labelByContainer[t.parentId] : null;
+  const containerTag = (t: Item) =>
+    container === ALL && t.parentId !== rootId ? labelByContainer[t.parentId] : null;
 
-  const displayStatus = (t: Task) => overrides[t.id] ?? t.status;
-  const inContainer = container === ALL ? tasks : tasks.filter((t) => t.parentId === container);
-  const bucketOf = (t: Task) => (statuses.includes(displayStatus(t)) ? displayStatus(t) : '');
-  const hasNoStatus = inContainer.some((t) => !statuses.includes(displayStatus(t)));
-  const columns = hasNoStatus ? ['', ...statuses] : statuses;
+  const displayGroup = (t: Item) => overrides[t.id] ?? t.group;
+  const inContainer = container === ALL ? items : items.filter((t) => t.parentId === container);
+  const bucketOf = (t: Item) => (groups.includes(displayGroup(t)) ? displayGroup(t) : '');
+  const hasNoGroup = inContainer.some((t) => !groups.includes(displayGroup(t)));
+  const columns = hasNoGroup ? ['', ...groups] : groups;
   const cardsIn = (col: string) =>
     inContainer.filter((t) => bucketOf(t) === col).sort((a, b) => oi(a.id) - oi(b.id));
 
@@ -80,11 +92,10 @@ export default function KanbanBoard({
     setDragOver(null);
     if (!t) return;
 
-    const changedStatus = col !== '' && displayStatus(t) !== col;
+    const changedGroup = col !== '' && displayGroup(t) !== col;
     const colIds = cardsIn(col).filter((x) => x.id !== t.id).map((x) => x.id);
     const clamped = Math.max(0, Math.min(index, colIds.length));
 
-    // Where to slot the dragged id within the global order.
     const without = order.filter((id) => id !== t.id);
     let insertAt: number;
     if (colIds.length === 0) {
@@ -99,15 +110,15 @@ export default function KanbanBoard({
     const newOrder = [...without.slice(0, insertAt), t.id, ...without.slice(insertAt)];
 
     setOrder(newOrder);
-    if (changedStatus) setOverrides((o) => ({ ...o, [t.id]: col }));
+    if (changedGroup) setOverrides((o) => ({ ...o, [t.id]: col }));
 
     startTransition(async () => {
-      if (changedStatus) {
+      if (changedGroup) {
         await saveNode({
           id: t.id,
-          type: 'task',
+          type: childType,
           parent: t.parentId,
-          data: { ...t.data, status: col },
+          data: { ...t.data, [groupBy]: col },
           changeNote: 'moved',
           revalidate: revalidatePath,
         });
@@ -117,15 +128,15 @@ export default function KanbanBoard({
     });
   }
 
-  function quickAdd(status: string) {
+  function quickAdd(group: string) {
     const title = addTitle.trim();
     if (!title) return;
     startTransition(async () => {
       await saveNode({
-        type: 'task',
+        type: childType,
         parent: addParent,
-        data: { title, status: status || statuses[0] },
-        position: tasks.length, // append
+        data: { title, [groupBy]: group || groups[0] },
+        position: items.length, // append
         changeNote: 'created',
         revalidate: revalidatePath,
       });
@@ -146,15 +157,17 @@ export default function KanbanBoard({
 
   return (
     <div className="my-4">
-      <div className="mb-4 flex items-center gap-3">
-        <span className="field-label" style={{ margin: 0 }}>Container</span>
-        <Select
-          value={container}
-          onChange={(v) => setContainer(v)}
-          options={containers.map((c) => ({ value: c.id, label: c.label, dividerBefore: c.dividerBefore }))}
-          ariaLabel="Board container"
-        />
-      </div>
+      {containers.length > 1 && (
+        <div className="mb-4 flex items-center gap-3">
+          <span className="field-label" style={{ margin: 0 }}>Container</span>
+          <Select
+            value={container}
+            onChange={(v) => setContainer(v)}
+            options={containers.map((c) => ({ value: c.id, label: c.label, dividerBefore: c.dividerBefore }))}
+            ariaLabel="Board container"
+          />
+        </div>
+      )}
 
       <div className="flex gap-3 overflow-x-auto pb-2" style={{ alignItems: 'flex-start' }}>
         {columns.map((col) => {
@@ -185,7 +198,6 @@ export default function KanbanBoard({
 
               <div className="p-2 flex flex-col" style={{ minHeight: 60, gap: 8 }}>
                 {(() => {
-                  // Index used for the insertion indicator counts only non-dragged cards.
                   let visibleIdx = -1;
                   return cards.map((t) => {
                     const isDragged = dragId === t.id;
@@ -240,7 +252,7 @@ export default function KanbanBoard({
                   <input
                     autoFocus
                     className="field-input"
-                    placeholder="Task title…"
+                    placeholder={`${typeLabel} title…`}
                     value={addTitle}
                     onChange={(e) => setAddTitle(e.target.value)}
                     onKeyDown={(e) => {
@@ -277,9 +289,9 @@ export default function KanbanBoard({
         <NodeEditModal
           open={!!edit}
           onClose={() => setEdit(null)}
-          node={{ id: edit.id, type_key: 'task', parent_id: edit.parentId, data: edit.data } as unknown as NodeRow}
-          fields={taskFields}
-          typeLabel="Task"
+          node={{ id: edit.id, type_key: childType, parent_id: edit.parentId, data: edit.data } as unknown as NodeRow}
+          fields={fields}
+          typeLabel={typeLabel}
           revalidatePath={revalidatePath}
         />
       )}

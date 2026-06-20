@@ -184,10 +184,57 @@ export interface ChoiceOption {
 export interface NodeConfig {
   allowedParents: string[];
   fields: FieldDef[];
+  /** Detail-screen tab spec (definition-level). Sparse overlay over the tabs
+   *  derived from fields/children/edges — see `nodeTabs` + `lib/views`. */
+  tabs?: TabSpec[];
+  /** Whether this type gets a register link in the nav sidebar. */
+  sidebar?: boolean;
+  /** Icon name (see `lib/views/icons`) for nav / list header / recents. */
+  icon?: string;
+}
+
+/** One allowed (from-type → to-type) relationship for an edge type. `*` is a
+ *  wildcard matching any node type (used by the loose `related` edge). */
+export interface EdgePair {
+  from: string;
+  to: string;
 }
 
 export interface EdgeConfig {
-  from: string[];
-  to: string[];
+  /** Each distinct relationship the edge permits, declared explicitly — NOT the
+   *  cross-product of two lists. `[{from:'initiative',to:'risk'}]` allows only
+   *  that direction, never the incidental cross terms. */
+  pairs: EdgePair[];
   fields: FieldDef[];
+}
+
+/**
+ * A presentation kind in the view registry (`src/lib/views/registry.tsx`).
+ * `overview | children | edge | activity` are structural (derived defaults);
+ * `board | red | timeline` are optional views the user adds, gated by a
+ * circumstance predicate.
+ */
+export type ViewKind =
+  | 'overview'
+  | 'children'
+  | 'edge'
+  | 'activity'
+  | 'board'
+  | 'red'
+  | 'timeline';
+
+/**
+ * One detail-screen tab, stored on a node definition's `config.tabs`.
+ * Either references a derived structural tab (`ref`) — to reorder, hide or
+ * relabel it — or adds an optional view (`kind`). `config` carries view params
+ * (e.g. board: `{ childType, groupBy, containerTypes, cardFields }`;
+ * children: `{ onlyTypes }`).
+ */
+export interface TabSpec {
+  id: string;
+  ref?: string;
+  kind?: ViewKind;
+  label?: string;
+  hidden?: boolean;
+  config?: Record<string, unknown>;
 }
