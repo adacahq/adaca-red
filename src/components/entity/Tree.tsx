@@ -14,7 +14,7 @@ import { saveNode, deleteNode } from '@/lib/nodes/actions';
 import { useConfirm } from '@/components/ui/Confirm';
 import Select from '@/components/ui/Select';
 import Chip from './Chips';
-import NodeEditModal from './NodeEditModal';
+import NodeEditModal, { type ParentOption } from './NodeEditModal';
 
 export interface ChildType {
   key: string;
@@ -52,6 +52,44 @@ export default function Tree({
     }
     return m;
   }, [nodes]);
+
+  // Adaptive re-parenting: a node's valid new parents are existing nodes in this
+  // tree whose type can contain it (per `allowedParents`, inverted into
+  // `childTypesByParent`), minus itself and its own descendants (no cycles).
+  const allowedParentTypesFor = (typeKey: string): string[] =>
+    Object.keys(childTypesByParent).filter((p) =>
+      (childTypesByParent[p] ?? []).some((ct) => ct.key === typeKey),
+    );
+
+  function descendantsOf(id: string): Set<string> {
+    const out = new Set<string>();
+    const stack = [id];
+    while (stack.length) {
+      const cur = stack.pop() as string;
+      for (const c of byParent[cur] ?? []) {
+        out.add(c.id);
+        stack.push(c.id);
+      }
+    }
+    return out;
+  }
+
+  function parentOptionsFor(node: NodeRow): ParentOption[] {
+    const allowed = allowedParentTypesFor(node.type_key);
+    const banned = descendantsOf(node.id);
+    banned.add(node.id);
+    return nodes
+      .filter((n) => allowed.includes(n.type_key) && !banned.has(n.id))
+      .map((n) => ({
+        value: n.id,
+        label:
+          n.id === rootId
+            ? 'Top level'
+            : `${((n.data ?? {}) as { title?: string }).title ?? 'Untitled'} · ${typeLabels[n.type_key] ?? n.type_key}`,
+        position: byParent[n.id]?.length ?? 0,
+      }))
+      .sort((a, b) => (a.value === rootId ? -1 : b.value === rootId ? 1 : a.label.localeCompare(b.label)));
+  }
 
   function toggle(id: string) {
     setExpanded((s) => {
@@ -188,6 +226,7 @@ export default function Tree({
           node={editNode}
           fields={fieldsByType[editNode.type_key] ?? []}
           typeLabel={typeLabels[editNode.type_key] ?? editNode.type_key}
+          parentOptions={parentOptionsFor(editNode)}
           revalidatePath={revalidatePath}
         />
       )}

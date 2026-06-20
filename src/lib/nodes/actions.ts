@@ -21,7 +21,9 @@ export async function saveNode(input: NodeInput): Promise<string> {
     p_type: input.type,
     p_parent: input.parent ?? null,
     p_data: input.data as Json,
-    p_position: input.position ?? 0,
+    // null → RPC preserves existing position on update (and defaults to 0 on
+    // create). Passing 0 here would reset a node to the top on every edit.
+    p_position: input.position ?? null,
     p_change_note: input.changeNote ?? null,
   });
   if (error) throw error;
