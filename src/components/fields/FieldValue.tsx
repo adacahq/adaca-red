@@ -3,6 +3,7 @@ import { formatDate } from '@/lib/format';
 import { getChoices } from '@/lib/definitions/choices';
 import Chip from '@/components/entity/Chips';
 import RichTextView from '@/components/rich-text/RichTextView';
+import { UserName, UserNames } from './UsersContext';
 
 const EMPTY = <span style={{ color: 'var(--muted-2)' }}>–</span>;
 
@@ -37,8 +38,11 @@ export default function FieldValue({
       }
       return <>{String(value)}</>;
     }
-    case 'text':
     case 'user':
+      return <UserName id={String(value)} />;
+    case 'users':
+      return <UserNames ids={Array.isArray(value) ? (value as string[]) : []} />;
+    case 'text':
     default:
       return <>{String(value)}</>;
   }

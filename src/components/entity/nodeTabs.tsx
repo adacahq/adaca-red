@@ -14,11 +14,9 @@ import type { DefinitionRow, NodeRow, TabSpec, ViewKind } from '@/lib/supabase/t
 import type { TabDef } from '@/components/ui/Tabs';
 
 import FieldsSection from './FieldsSection';
-import AssignmentsSection from './AssignmentsSection';
 import RevisionsPanel from './RevisionsPanel';
 import ContainmentTree from './ContainmentTree';
 import PlainEdges from '@/components/edges/PlainEdges';
-import SectionHeader from '@/components/canvas/SectionHeader';
 import Board from '@/components/board/Board';
 import InitiativeMitigations from '@/components/red/InitiativeMitigations';
 import RiskMitigations from '@/components/red/RiskMitigations';
@@ -58,13 +56,7 @@ interface RenderCtx {
 function renderView(kind: ViewKind, c: RenderCtx): ReactNode {
   switch (kind) {
     case 'overview':
-      return (
-        <>
-          <FieldsSection typeKey={c.def.key} id={c.id} />
-          <SectionHeader title="People" />
-          <AssignmentsSection nodeId={c.id} revalidatePath={c.path} />
-        </>
-      );
+      return <FieldsSection typeKey={c.def.key} id={c.id} />;
     case 'children': {
       const childType = c.meta.childType as string;
       const onlyTypes = (c.meta.onlyTypes as string[] | undefined) ?? [childType];

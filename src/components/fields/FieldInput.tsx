@@ -5,8 +5,9 @@ import { getChoices } from '@/lib/definitions/choices';
 import RichText from '@/components/rich-text/RichText';
 import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
+import { UserSelect, UsersSelect } from './UserPicker';
 
-export type FieldValueT = string | number | boolean | null | undefined;
+export type FieldValueT = string | number | boolean | string[] | null | undefined;
 
 export default function FieldInput({
   field,
@@ -86,8 +87,13 @@ export default function FieldInput({
         />
       );
 
-    case 'text':
     case 'user':
+      return <UserSelect label={field.label} value={(value as string) ?? ''} onChange={(v) => onChange(v)} />;
+
+    case 'users':
+      return <UsersSelect label={field.label} value={(value as string[]) ?? []} onChange={(v) => onChange(v)} />;
+
+    case 'text':
     default:
       return (
         <input

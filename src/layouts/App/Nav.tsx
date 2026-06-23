@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ComponentType, SVGProps } from 'react';
-import { HomeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, SparklesIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { iconFor } from '@/lib/views/icons';
 import type { RegisterItem } from './index';
 
@@ -120,6 +120,9 @@ export default function Nav({
       <ul role="list" className="flex flex-col gap-0.5">
         <li>
           <IconItem name="Dashboard" href="/" Icon={HomeIcon} active={pathname === '/'} onNavigate={onNavigate} />
+        </li>
+        <li>
+          <IconItem name="For You" href="/for-you" Icon={SparklesIcon} active={startsWith(pathname, '/for-you')} onNavigate={onNavigate} />
         </li>
       </ul>
 

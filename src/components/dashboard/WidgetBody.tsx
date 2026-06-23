@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import {
   ResponsiveContainer,
   PieChart,
@@ -71,14 +71,43 @@ function KpiBody({ value, label }: { value: number; label: string }) {
 }
 
 function TableBody({ columns, rows }: { columns: string[]; rows: string[][] }) {
+  // Sort by column index; local state so a refresh resets it.
+  const [sort, setSort] = useState<{ i: number; dir: 'asc' | 'desc' } | null>(null);
   if (rows.length === 0) return <Centered>No rows</Centered>;
+
+  const sorted = sort
+    ? [...rows].sort(
+        (a, b) =>
+          (sort.dir === 'asc' ? 1 : -1) *
+          String(a[sort.i] ?? '').localeCompare(String(b[sort.i] ?? ''), undefined, { numeric: true, sensitivity: 'base' }),
+      )
+    : rows;
+  const toggle = (i: number) =>
+    setSort((s) => (!s || s.i !== i ? { i, dir: 'asc' } : s.dir === 'asc' ? { i, dir: 'desc' } : null));
+
   return (
     <table className="w-full text-[13px]" style={{ borderCollapse: 'collapse' }}>
       <thead>
-        <tr>{columns.map((c) => <th key={c} className="mono" style={TH}>{c}</th>)}</tr>
+        <tr>
+          {columns.map((c, ci) => {
+            const activeSort = sort?.i === ci ? sort : null;
+            return (
+              <th
+                key={c}
+                className="mono"
+                style={{ ...TH, cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => toggle(ci)}
+                aria-sort={activeSort ? (activeSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+              >
+                {c}
+                {activeSort && <span style={{ color: 'var(--accent)' }}>{activeSort.dir === 'asc' ? ' ▲' : ' ▼'}</span>}
+              </th>
+            );
+          })}
+        </tr>
       </thead>
       <tbody>
-        {rows.map((r, ri) => (
+        {sorted.map((r, ri) => (
           <tr key={ri}>
             {r.map((cell, ci) => (
               <td key={ci} style={{ ...TD, color: ci === 0 ? 'var(--ink)' : 'var(--muted)', fontWeight: ci === 0 ? 500 : 400 }}>

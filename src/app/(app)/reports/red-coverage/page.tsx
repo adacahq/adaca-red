@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { listNodes, listEdgesByType } from '@/lib/nodes/queries';
 import { readRed, coverageFromReds, type Red } from '@/lib/red';
+import CoverageTable from './CoverageTable';
 
 export const metadata = { title: 'RED coverage · Adaca Red' };
 
@@ -36,50 +36,7 @@ export default async function Page() {
         {unmitigated.length} of {rows.length} risks have no mitigating initiative.
       </p>
 
-      <table className="w-full text-[14px]" style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            {['Risk', 'Mitigations', 'Coverage'].map((h) => (
-              <th
-                key={h}
-                className="mono text-left"
-                style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', padding: '10px 14px', background: 'var(--bg-alt)', borderBottom: '1px solid var(--line)' }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
-                <Link href={`/risks/${r.id}`} className="text-link" style={{ fontWeight: 500 }}>
-                  {r.title}
-                </Link>
-              </td>
-              <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>
-                {r.count}
-              </td>
-              <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
-                <span
-                  className="mono"
-                  style={{ fontSize: 12, color: r.coverage < 33 ? 'var(--red-ink)' : r.coverage < 66 ? 'var(--amber-ink)' : 'var(--green-ink)' }}
-                >
-                  {r.coverage}%
-                </span>
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={3} style={{ padding: '24px 14px', color: 'var(--muted-2)' }}>
-                No risks yet.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <CoverageTable rows={rows} />
     </div>
   );
 }

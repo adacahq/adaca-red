@@ -3,7 +3,6 @@ import type {
   Database,
   NodeRow,
   EdgeRow,
-  AssignmentRow,
   RevisionRow,
   UserRow,
 } from '@/lib/supabase/types';
@@ -67,12 +66,6 @@ export async function listEdges(
   else q = q.or(`from_id.eq.${nodeId},to_id.eq.${nodeId}`);
   if (typeKey) q = q.eq('type_key', typeKey);
   const { data, error } = await q;
-  if (error) throw error;
-  return data;
-}
-
-export async function listAssignments(db: DB, nodeId: string): Promise<AssignmentRow[]> {
-  const { data, error } = await db.from('assignments').select('*').eq('node_id', nodeId);
   if (error) throw error;
   return data;
 }
