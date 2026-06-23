@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminNav from '../AdminNav';
+import RolesTable from './RolesTable';
 
 export const metadata = { title: 'Roles · Adaca Red' };
 
@@ -24,32 +25,7 @@ export default async function Page() {
         the top-level system role on a user account.
       </p>
 
-      <table className="w-full text-[14px]" style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            {['Key', 'Label', 'Config'].map((h) => (
-              <th
-                key={h}
-                className="mono text-left"
-                style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', padding: '10px 14px', background: 'var(--bg-alt)', borderBottom: '1px solid var(--line)' }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {(roles ?? []).map((r) => (
-            <tr key={r.id}>
-              <td className="mono" style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)', color: 'var(--ink)' }}>{r.key}</td>
-              <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)', color: 'var(--ink)' }}>{r.label}</td>
-              <td className="mono" style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)', color: 'var(--muted-2)', fontSize: 12 }}>
-                {JSON.stringify(r.config)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <RolesTable roles={roles ?? []} />
     </div>
   );
 }

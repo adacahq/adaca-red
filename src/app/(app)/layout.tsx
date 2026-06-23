@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { loadChoiceMeta, loadDefinitions, nodeConfig } from '@/lib/definitions/server';
+import { listUsers } from '@/lib/nodes/queries';
 import { pluralize } from '@/lib/text';
 import { routeFor } from '@/lib/nodes/routes';
 import AppShell from '@/layouts/App';
@@ -27,7 +28,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (!profile?.role) redirect('/no-access');
 
   const isAdmin = profile.role === 'admin' || profile.role === 'owner';
-  const [choiceMeta, defs] = await Promise.all([loadChoiceMeta(supabase), loadDefinitions(supabase)]);
+  const [choiceMeta, defs, users] = await Promise.all([
+    loadChoiceMeta(supabase),
+    loadDefinitions(supabase),
+    listUsers(supabase),
+  ]);
+
+  // id → display info for the app-wide UsersProvider (powers user-field pickers
+  // and name display).
+  const userMeta = Object.fromEntries(users.map((u) => [u.id, { name: u.name, email: u.email }]));
 
   const nodeDefs = Object.values(defs).filter((d) => d.kind === 'node');
 
@@ -46,6 +55,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       user={{ name: profile.name, email: profile.email, role: profile.role }}
       isAdmin={isAdmin}
       choiceMeta={choiceMeta}
+      userMeta={userMeta}
       register={register}
       typeIcons={typeIcons}
     >

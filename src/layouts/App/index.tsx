@@ -7,6 +7,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { ConfirmProvider } from '@/components/ui/Confirm';
 import { ChoiceProvider } from '@/components/entity/ChoiceContext';
+import { UsersProvider, type UserMeta } from '@/components/fields/UsersContext';
 import type { ChoiceMeta } from '@/lib/definitions/choices';
 import Logo from '@/components/ui/Logo';
 import Nav from './Nav';
@@ -67,6 +68,7 @@ export default function AppShell({
   user,
   isAdmin,
   choiceMeta,
+  userMeta = {},
   register = [],
   typeIcons = {},
   children,
@@ -74,6 +76,7 @@ export default function AppShell({
   user: AppUser;
   isAdmin: boolean;
   choiceMeta: ChoiceMeta;
+  userMeta?: UserMeta;
   register?: RegisterItem[];
   typeIcons?: Record<string, string>;
   children: ReactNode;
@@ -83,6 +86,7 @@ export default function AppShell({
 
   return (
     <ChoiceProvider value={choiceMeta}>
+      <UsersProvider value={userMeta}>
       <div>
       {/* Mobile drawer */}
       <Transition.Root show={open} as={Fragment}>
@@ -167,6 +171,7 @@ export default function AppShell({
         </main>
       </div>
       </div>
+      </UsersProvider>
     </ChoiceProvider>
   );
 }

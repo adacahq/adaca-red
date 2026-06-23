@@ -37,6 +37,11 @@ function fieldSchema(f: FieldDef): z.ZodTypeAny {
     case 'boolean':
       schema = z.coerce.boolean();
       break;
+    case 'users': {
+      const arr = z.array(z.string());
+      schema = f.required ? arr.min(1) : arr;
+      break;
+    }
     case 'text':
     case 'richtext':
     case 'user':

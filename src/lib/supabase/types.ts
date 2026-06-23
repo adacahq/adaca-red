@@ -67,12 +67,6 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['edges']['Insert']>;
         Relationships: [];
       };
-      assignments: {
-        Row: Timestamps & { node_id: string; user_id: string; role_key: string };
-        Insert: { id?: string; created_at?: string; updated_at?: string; node_id: string; user_id: string; role_key: string };
-        Update: Partial<Database['public']['Tables']['assignments']['Insert']>;
-        Relationships: [];
-      };
       revisions: {
         Row: Timestamps & {
           target_kind: 'node' | 'edge'; target_id: string; rev_no: number;
@@ -95,6 +89,17 @@ export interface Database {
           user_id: string; name?: string; is_default?: boolean; layout?: Json; deleted_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['dashboards']['Insert']>;
+        Relationships: [];
+      };
+      for_you_views: {
+        Row: Timestamps & {
+          user_id: string; is_default: boolean; config: Json; deleted_at: string | null;
+        };
+        Insert: {
+          id?: string; created_at?: string; updated_at?: string;
+          user_id: string; is_default?: boolean; config?: Json; deleted_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['for_you_views']['Insert']>;
         Relationships: [];
       };
     };
@@ -145,7 +150,6 @@ export type RoleRow = Database['public']['Tables']['roles']['Row'];
 export type UserRow = Database['public']['Tables']['users']['Row'];
 export type NodeRow = Database['public']['Tables']['nodes']['Row'];
 export type EdgeRow = Database['public']['Tables']['edges']['Row'];
-export type AssignmentRow = Database['public']['Tables']['assignments']['Row'];
 export type RevisionRow = Database['public']['Tables']['revisions']['Row'];
 export type DashboardRow = Database['public']['Tables']['dashboards']['Row'];
 
@@ -153,9 +157,11 @@ export type DashboardRow = Database['public']['Tables']['dashboards']['Row'];
 export interface FieldDef {
   key: string;
   label: string;
-  data_type: 'text' | 'number' | 'enum' | 'date' | 'boolean' | 'richtext' | 'user';
+  data_type: 'text' | 'number' | 'enum' | 'date' | 'boolean' | 'richtext' | 'user' | 'users';
   required?: boolean;
   filterable?: boolean;
+  /** For `user`/`users` fields: include in the per-user "For You" surface. */
+  forYou?: boolean;
   position?: number;
   options?: {
     /**

@@ -22,7 +22,18 @@ import { getChoices } from '@/lib/definitions/choices';
 import type { ChoiceOption, DefinitionRow, EdgePair, FieldDef, TabSpec } from '@/lib/supabase/types';
 import { saveDefinition, createDefinition, deleteDefinition } from '@/lib/definitions/actions';
 
-const DATA_TYPES = ['text', 'number', 'enum', 'date', 'boolean', 'richtext', 'user'] as const;
+const DATA_TYPES = ['text', 'number', 'enum', 'date', 'boolean', 'richtext', 'user', 'users'] as const;
+const DATA_TYPE_LABELS: Record<(typeof DATA_TYPES)[number], string> = {
+  text: 'text',
+  number: 'number',
+  enum: 'enum',
+  date: 'date',
+  boolean: 'boolean',
+  richtext: 'richtext',
+  user: 'user',
+  users: 'users (multi)',
+};
+const isUserType = (t: FieldDef['data_type']) => t === 'user' || t === 'users';
 
 interface Draft {
   key: string;
@@ -30,6 +41,7 @@ interface Draft {
   data_type: FieldDef['data_type'];
   required: boolean;
   filterable: boolean;
+  forYou: boolean;
   choices: ChoiceOption[];
   min: string;
   max: string;
@@ -43,6 +55,7 @@ function toDraft(f: FieldDef): Draft {
     data_type: f.data_type,
     required: !!f.required,
     filterable: !!f.filterable,
+    forYou: !!f.forYou,
     choices: getChoices(f),
     min: f.options?.min != null ? String(f.options.min) : '',
     max: f.options?.max != null ? String(f.options.max) : '',
@@ -66,6 +79,7 @@ function toField(d: Draft, i: number): FieldDef {
     data_type: d.data_type,
     required: d.required || undefined,
     filterable: d.filterable || undefined,
+    forYou: (isUserType(d.data_type) && d.forYou) || undefined,
     position: i,
     options: Object.keys(options).length ? options : undefined,
   };
@@ -224,7 +238,7 @@ function EditModal({
     });
   }
   function addField() {
-    setFields((fs) => [...fs, { key: '', label: '', data_type: 'text', required: false, filterable: false, choices: [], min: '', max: '', labels: [] }]);
+    setFields((fs) => [...fs, { key: '', label: '', data_type: 'text', required: false, filterable: false, forYou: false, choices: [], min: '', max: '', labels: [] }]);
   }
   function removeField(i: number) {
     setFields((fs) => fs.filter((_, idx) => idx !== i));
@@ -328,7 +342,7 @@ function EditModal({
                   mono
                   value={f.data_type}
                   onChange={(v) => patch(i, { data_type: v as FieldDef['data_type'] })}
-                  options={DATA_TYPES.map((t) => ({ value: t, label: t }))}
+                  options={DATA_TYPES.map((t) => ({ value: t, label: DATA_TYPE_LABELS[t] }))}
                 />
               </div>
               <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }}>
@@ -337,6 +351,11 @@ function EditModal({
               <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }}>
                 <input type="checkbox" checked={f.filterable} onChange={(e) => patch(i, { filterable: e.target.checked })} /> filter
               </label>
+              {isUserType(f.data_type) && (
+                <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }} title="Surface items where this person is you in the For You tab">
+                  <input type="checkbox" checked={f.forYou} onChange={(e) => patch(i, { forYou: e.target.checked })} /> for you
+                </label>
+              )}
               <span style={{ flex: 1 }} />
               <div className="flex items-center gap-1">
                 <button type="button" className="muted-link" title="Up" onClick={() => moveField(i, -1)}><ChevronUpIcon className="h-4 w-4" /></button>

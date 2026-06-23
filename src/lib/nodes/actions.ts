@@ -87,23 +87,3 @@ export async function deleteEdge(id: string, revalidate?: string): Promise<void>
   if (revalidate) revalidatePath(revalidate);
 }
 
-export async function assignUser(
-  nodeId: string,
-  userId: string,
-  roleKey: string,
-  revalidate?: string,
-): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('assignments')
-    .insert({ node_id: nodeId, user_id: userId, role_key: roleKey });
-  if (error) throw error;
-  if (revalidate) revalidatePath(revalidate);
-}
-
-export async function unassignUser(assignmentId: string, revalidate?: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.from('assignments').delete().eq('id', assignmentId);
-  if (error) throw error;
-  if (revalidate) revalidatePath(revalidate);
-}
