@@ -2,17 +2,12 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { searchNodes } from '@/lib/nodes/queries';
+import { searchableTypes } from '@/lib/nodes/search';
 import { formatDate } from '@/lib/format';
 import Chip from '@/components/entity/Chips';
 import EmptyState from '@/components/ui/EmptyState';
 
 export const metadata = { title: 'Search · Adaca Red' };
-
-const TYPES = [
-  { key: 'initiative', label: 'Initiatives', base: '/initiatives' },
-  { key: 'risk', label: 'Risks', base: '/risks' },
-  { key: 'incident', label: 'Incidents', base: '/incidents' },
-];
 
 export default async function Page({
   searchParams,
@@ -23,9 +18,14 @@ export default async function Page({
   const query = (q ?? '').trim();
 
   const supabase = await createClient();
+  // Same definitions-driven register list the dropdown uses — see
+  // searchableTypes(). Neither surface may hardcode a type list.
   const groups = query
     ? await Promise.all(
-        TYPES.map(async (t) => ({ ...t, rows: await searchNodes(supabase, t.key, query) })),
+        (await searchableTypes(supabase)).map(async (t) => ({
+          ...t,
+          rows: await searchNodes(supabase, t.key, query),
+        })),
       )
     : [];
   const total = groups.reduce((n, g) => n + g.rows.length, 0);
@@ -37,7 +37,7 @@ export default async function Page({
         Search
       </h1>
       <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
-        Find any initiative, risk or incident by title.
+        Find anything in the register by title — every type that appears in the sidebar is searched.
       </p>
 
       <form action="/search" className="mt-8 flex gap-3">

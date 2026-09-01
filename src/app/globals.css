@@ -852,6 +852,13 @@ span[data-tip]:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .tstrip p.tmis, .tstrip p.tmis b { color: var(--amber); }
 .tstrip a { display: inline-block; margin-top: 10px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); text-decoration: none; }
 .tstrip a:hover { text-decoration: underline; }
+/* A link inside a row is a RECENT, not the strip's trailing action: it should
+   read as the row it sits in (quiet, sentence case, sans) and only take the
+   accent on hover. Without this the whole recents list renders as a stack of
+   shouty accent mono-caps — PMO's `.tstrip a` assumes one trailing link, not
+   a list. Beats `.tstrip a` on specificity (0,1,2 vs 0,1,1). */
+.tstrip p a { display: inline; margin-top: 0; font-family: inherit; font-size: inherit; letter-spacing: normal; text-transform: none; color: inherit; transition: color 0.25s; }
+.tstrip p a:hover { color: var(--accent); text-decoration: none; }
 
 /* ═══════════════════════════════════════════════════════════
    PORT NOTES — what the Canvas idiom catalogue above deliberately

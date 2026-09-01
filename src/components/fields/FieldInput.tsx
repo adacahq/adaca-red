@@ -99,6 +99,7 @@ export default function FieldInput({
     case 'date':
       return (
         <DatePicker
+          fullWidth
           ariaLabel={field.label}
           value={(value as string) ?? ''}
           onChange={(v) => onChange(v || null)}

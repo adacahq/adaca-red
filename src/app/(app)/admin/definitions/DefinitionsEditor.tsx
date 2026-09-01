@@ -170,7 +170,10 @@ function TypeSection({
       header: 'Fields',
       mono: true,
       cellStyle: { color: 'var(--muted)' },
-      cell: (def) => `${(((def.config ?? {}) as { fields?: unknown[] }).fields ?? []).length} fields`,
+      cell: (def) => {
+        const n = (((def.config ?? {}) as { fields?: unknown[] }).fields ?? []).length;
+        return `${n} field${n === 1 ? '' : 's'}`;
+      },
       sortValue: (def) => (((def.config ?? {}) as { fields?: unknown[] }).fields ?? []).length,
     },
     {

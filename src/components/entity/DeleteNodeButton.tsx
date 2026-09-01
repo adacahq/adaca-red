@@ -34,7 +34,7 @@ export default function DeleteNodeButton({
   }
 
   return (
-    <button type="button" className="btn btn-ghost sm" disabled={pending} onClick={onClick}>
+    <button type="button" className="btn btn-danger sm" disabled={pending} onClick={onClick}>
       {pending && <span className="spinner" aria-hidden />}
       {label}
     </button>

@@ -120,7 +120,10 @@ function BarBody({ data }: { data: { name: string; value: number }[] }) {
         <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: 'var(--line)' }} interval={0} />
         <YAxis tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} />
         <Tooltip cursor={{ fill: 'var(--ghost)' }} contentStyle={TOOLTIP} />
-        <Bar dataKey="value" fill="var(--accent)" />
+        {/* SERIES[0], not --accent: a chart mark is DATA, and --accent is
+            chrome. A single-series bar in blue next to donuts on the orange
+            ramp made one dashboard read as two different systems. */}
+        <Bar dataKey="value" fill={SERIES[0]} />
       </BarChart>
     </ChartFrame>
   );
