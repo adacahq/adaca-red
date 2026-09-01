@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { loadDefinitions, fieldsOf } from '@/lib/definitions/server';
 import { forYouFieldsByType, forYouItems } from '@/lib/forYou/queries';
@@ -29,11 +30,17 @@ export default async function Page() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1.2 }}>For You</h1>
-      <p className="mt-2 mb-8 text-[14px]" style={{ color: 'var(--muted)' }}>
+      <p className="eyebrow rv">For You</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        For You
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
         Everything across the system where you’re the assigned person.
       </p>
-      <ForYouView items={items} typeMeta={typeMeta} initialConfig={config} />
+
+      <div className="mt-10">
+        <ForYouView items={items} typeMeta={typeMeta} initialConfig={config} />
+      </div>
     </div>
   );
 }

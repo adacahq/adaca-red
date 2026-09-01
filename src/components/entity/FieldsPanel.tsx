@@ -21,7 +21,7 @@ export default function FieldsPanel({
   return (
     <dl
       className="my-4 grid grid-cols-1 sm:grid-cols-[180px_1fr]"
-      style={{ border: '1px solid var(--line)', margin: 0 }}
+      style={{ borderTop: '1px solid var(--line)', margin: 0 }}
     >
       {fields.map((f, i) => {
         const border = i === fields.length - 1 ? 'none' : '1px solid var(--line)';
@@ -29,12 +29,12 @@ export default function FieldsPanel({
           <div key={f.key} className="contents">
             <dt
               className="field-label"
-              style={{ padding: '12px 16px', margin: 0, borderBottom: border }}
+              style={{ padding: '14px 16px', margin: 0, borderBottom: border }}
             >
               {f.label}
             </dt>
             <dd
-              style={{ padding: '12px 16px', margin: 0, borderBottom: border, fontSize: 14, color: 'var(--ink)' }}
+              style={{ padding: '14px 16px', margin: 0, borderBottom: border, fontSize: 13.5, color: 'var(--fg)' }}
             >
               <FieldValue field={f} value={data[f.key]} />
             </dd>

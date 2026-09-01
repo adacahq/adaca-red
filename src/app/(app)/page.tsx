@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { loadDefinitions, fieldsOf } from '@/lib/definitions/server';
 import { loadDashboard } from '@/lib/dashboard/actions';
@@ -24,19 +25,17 @@ export default async function Dashboard() {
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-3">
-        <span
-          className="mono"
-          style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--muted-2)', textTransform: 'uppercase' }}
-        >
-          Operations
-        </span>
-        <span className="divider" style={{ flex: 1 }} aria-hidden />
+      <p className="eyebrow rv">Dashboard</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        Dashboard
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        Build your own view onto the register — KPIs, charts and tables assembled live from initiatives, risks and incidents.
+      </p>
+
+      <div className="mt-10">
+        <DashboardGrid initialLayout={layout} sources={sources} />
       </div>
-
-      <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1.2 }}>Dashboard</h1>
-
-      <DashboardGrid initialLayout={layout} sources={sources} />
     </div>
   );
 }

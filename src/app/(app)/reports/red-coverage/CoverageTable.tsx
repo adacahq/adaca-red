@@ -34,7 +34,7 @@ export default function CoverageTable({ rows }: { rows: CoverageRow[] }) {
       cell: (r) => (
         <span
           className="mono"
-          style={{ fontSize: 12, color: r.coverage < 33 ? 'var(--red-ink)' : r.coverage < 66 ? 'var(--amber-ink)' : 'var(--green-ink)' }}
+          style={{ fontSize: 12, color: r.coverage < 33 ? 'var(--red)' : r.coverage < 66 ? 'var(--amber)' : 'var(--green)' }}
         >
           {r.coverage}%
         </span>

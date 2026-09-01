@@ -1,173 +1,113 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import type { ComponentType, SVGProps } from 'react';
-import { HomeIcon, SparklesIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
-import { iconFor } from '@/lib/views/icons';
-import type { RegisterItem } from './index';
+import { usePathname } from 'next/navigation';
+import { sectionOn, viewOn, visibleViews } from '@/lib/nav';
+import type { NavGroup, NavSection } from '@/lib/nav';
+import SidebarRecents from './SidebarRecents';
 
-type Icon = ComponentType<SVGProps<SVGSVGElement>>;
-interface Leaf { name: string; href: string }
-
-const REPORTS: Leaf[] = [
-  { name: 'Risk matrix', href: '/reports/risk-matrix' },
-  { name: 'RED coverage', href: '/reports/red-coverage' },
-  { name: 'Portfolio', href: '/reports/portfolio' },
-  { name: 'Incident analytics', href: '/reports/incidents' },
-];
-const ADMIN: Leaf[] = [
-  { name: 'Users', href: '/admin/users' },
-  { name: 'Roles', href: '/admin/roles' },
-  { name: 'Definitions', href: '/admin/definitions' },
-];
-
-function startsWith(pathname: string, href: string) {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+function Chevron() {
+  return (
+    <svg viewBox="0 0 10 6" aria-hidden>
+      <path
+        d="M1 1l4 4 4-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
-function SectionLabel({ children, href }: { children: React.ReactNode; href?: string }) {
-  const style = {
-    fontSize: 9,
-    fontWeight: 500 as const,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase' as const,
-    color: 'var(--muted-2)',
-  };
-  return (
-    <div className="flex items-center gap-2 px-4 pb-1.5 pt-1">
-      {href ? (
-        <Link href={href} className="mono nav-section-link" style={style}>
-          {children}
+/**
+ * The rail's group/section tree (`nav.ts`). Every section with more than
+ * one visible view wears a chevron; the active section opens by default
+ * (and can be tucked away), while a closed section's chevron peeks at what
+ * sits beneath it without leaving the current screen. No icons — the rail
+ * is text-only.
+ */
+export default function Nav({ groups, role }: { groups: NavGroup[]; role: string }) {
+  const pathname = usePathname() ?? '/';
+  // The chevron toggles know where they were opened; navigating away resets
+  // them, so every screen starts from the default state (active section
+  // open, the rest closed).
+  const [flips, setFlips] = useState<{ keys: string[]; at: string } | null>(null);
+  const flipped = flips && flips.at === pathname ? flips.keys : [];
+
+  /** A chevron click flips its section away from the default state. */
+  function flip(key: string) {
+    const keys = flipped.includes(key)
+      ? flipped.filter((k) => k !== key)
+      : [...flipped, key];
+    setFlips({ keys, at: pathname });
+  }
+
+  function sectionItem(s: NavSection) {
+    const views = visibleViews(s, role);
+    if (!views.length) return null;
+    const on = sectionOn(s, pathname);
+    const multi = views.length > 1;
+    const expanded = multi && on !== flipped.includes(s.key);
+    return (
+      <div className={multi ? 'sect chv' : 'sect'} key={s.key}>
+        <Link href={views[0].href} className={on ? 'nv on' : 'nv'}>
+          <span>{s.label}</span>
         </Link>
-      ) : (
-        <span className="mono" style={style}>{children}</span>
-      )}
-      <span aria-hidden style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-    </div>
-  );
-}
-
-function IconItem({ name, href, Icon, active, onNavigate }: { name: string; href: string; Icon: Icon; active: boolean; onNavigate?: () => void }) {
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      data-active={active || undefined}
-      className="nav-link group relative flex items-center gap-x-3 py-[9px]"
-      style={{ paddingLeft: 16, paddingRight: 10, color: active ? 'var(--ink)' : 'var(--muted)' }}
-    >
-      <span
-        aria-hidden
-        className="nav-link-bar"
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 6,
-          bottom: 6,
-          width: 2,
-          background: active ? 'var(--accent)' : 'transparent',
-          transition: 'background 0.15s ease',
-        }}
-      />
-      <Icon className="h-4 w-4 shrink-0" style={{ color: active ? 'var(--accent)' : undefined }} aria-hidden />
-      <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: active ? 500 : 400, flex: 1 }}>
-        {name}
-      </span>
-    </Link>
-  );
-}
-
-function SubItem({ item, active, onNavigate }: { item: Leaf; active: boolean; onNavigate?: () => void }) {
-  return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      data-active={active || undefined}
-      className="nav-link group relative flex items-center gap-x-2.5 py-[7px]"
-      style={{ paddingLeft: 18, paddingRight: 10, color: active ? 'var(--ink)' : 'var(--muted)' }}
-    >
-      <span
-        aria-hidden
-        style={{
-          width: 4,
-          height: 4,
-          flexShrink: 0,
-          borderRadius: '9999px',
-          background: active ? 'var(--accent)' : 'var(--muted-2)',
-          transition: 'background 0.15s ease',
-        }}
-      />
-      <span style={{ fontSize: 12.5, fontWeight: active ? 500 : 400, flex: 1 }}>{item.name}</span>
-    </Link>
-  );
-}
-
-export default function Nav({
-  pathname,
-  isAdmin,
-  register = [],
-  onNavigate,
-  recentsSlot,
-}: {
-  pathname: string;
-  isAdmin: boolean;
-  register?: RegisterItem[];
-  onNavigate?: () => void;
-  recentsSlot?: React.ReactNode;
-}) {
-  return (
-    <nav className="flex flex-1 flex-col px-2 pb-6 pt-3">
-      <ul role="list" className="flex flex-col gap-0.5">
-        <li>
-          <IconItem name="Dashboard" href="/" Icon={HomeIcon} active={pathname === '/'} onNavigate={onNavigate} />
-        </li>
-        <li>
-          <IconItem name="For You" href="/for-you" Icon={SparklesIcon} active={startsWith(pathname, '/for-you')} onNavigate={onNavigate} />
-        </li>
-      </ul>
-
-      {register.length > 0 && (
-        <div className="mt-5">
-          <SectionLabel>Register</SectionLabel>
-          <ul role="list" className="flex flex-col gap-0.5">
-            {register.map((item) => (
-              <li key={item.href}>
-                <IconItem name={item.name} href={item.href} Icon={iconFor(item.icon)} active={startsWith(pathname, item.href)} onNavigate={onNavigate} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="mt-5">
-        <SectionLabel href="/reports">Reports</SectionLabel>
-        <ul role="list" className="flex flex-col gap-0.5">
-          {REPORTS.map((item) => (
-            <li key={item.href}>
-              <SubItem item={item} active={startsWith(pathname, item.href)} onNavigate={onNavigate} />
-            </li>
-          ))}
-        </ul>
+        {multi ? (
+          <button
+            type="button"
+            className="chev"
+            onClick={() => flip(s.key)}
+            aria-expanded={expanded}
+            aria-label={`${expanded ? 'Hide' : 'Show'} ${s.label} views`}
+          >
+            <Chevron />
+          </button>
+        ) : null}
+        {multi ? (
+          <div className={expanded ? 'views x' : 'views'} inert={!expanded}>
+            <div>
+              {views.map((v) => (
+                <Link
+                  key={v.href}
+                  href={v.href}
+                  className={on && viewOn(v, pathname) ? 'sv on' : 'sv'}
+                >
+                  <span>{v.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
+    );
+  }
 
-      {recentsSlot}
+  function groupItem(g: NavGroup) {
+    const sections = g.sections.map((s) => sectionItem(s)).filter(Boolean);
+    if (sections.length === 0) return null;
+    return (
+      <div className={g.footer ? 'grp mt-auto' : 'grp'} key={g.key}>
+        {g.label ? <span className="glabel">{g.label}</span> : null}
+        {sections}
+      </div>
+    );
+  }
 
-      {isAdmin && (
-        <div className="mt-auto pt-6">
-          <SectionLabel>
-            <span className="inline-flex items-center gap-1.5">
-              <Cog6ToothIcon className="h-3 w-3" aria-hidden /> Admin
-            </span>
-          </SectionLabel>
-          <ul role="list" className="flex flex-col gap-0.5">
-            {ADMIN.map((item) => (
-              <li key={item.href}>
-                <SubItem item={item} active={startsWith(pathname, item.href)} onNavigate={onNavigate} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+  // The footer group (Admin) renders last inside the flex column so its
+  // `mt-auto` pins it to the bottom of the rail; Recents sits above it,
+  // right after the main groups.
+  const mainGroups = groups.filter((g) => !g.footer);
+  const footerGroups = groups.filter((g) => g.footer);
+
+  return (
+    <nav aria-label="Primary" className="flex flex-1 flex-col">
+      {mainGroups.map((g) => groupItem(g))}
+      <SidebarRecents />
+      {footerGroups.map((g) => groupItem(g))}
     </nav>
   );
 }

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import type { FieldDef } from '@/lib/supabase/types';
 import { fieldsToZod } from '@/lib/definitions/zod';
-import FieldInput, { type FieldValueT } from '@/components/fields/FieldInput';
+import FieldInput, { rendersOwnLabel, type FieldValueT } from '@/components/fields/FieldInput';
 
 type Values = Record<string, FieldValueT>;
 
@@ -110,32 +110,30 @@ export default function EntityForm({
         <div
           className="mb-6 px-4 py-3 text-[13px]"
           style={{
-            background: 'var(--red-tint)',
-            color: 'var(--red-ink)',
-            border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)',
+            background: 'var(--crit-tint)',
+            color: 'var(--crit)',
+            border: '1px solid color-mix(in srgb, var(--crit) 25%, transparent)',
           }}
         >
           {formError}
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
         {ordered.map((f) => (
-          <div key={f.key}>
-            <label className="field-label" htmlFor={`f-${f.key}`}>
-              {f.label}
-              {f.required && <span style={{ color: 'var(--accent)' }}> *</span>}
-            </label>
+          <div key={f.key} className="field">
+            {!rendersOwnLabel(f) && (
+              <label className="field-label" htmlFor={`f-${f.key}`}>
+                {f.label}
+                {f.required && <span style={{ color: 'var(--accent)' }}> *</span>}
+              </label>
+            )}
             <FieldInput
               field={f}
               value={values[f.key]}
               onChange={(v) => setValues((s) => ({ ...s, [f.key]: v }))}
             />
-            {errors[f.key] && (
-              <p className="mt-1 text-[12px]" style={{ color: 'var(--red)' }}>
-                {errors[f.key]}
-              </p>
-            )}
+            {errors[f.key] && <span className="ferr">{errors[f.key]}</span>}
           </div>
         ))}
       </div>

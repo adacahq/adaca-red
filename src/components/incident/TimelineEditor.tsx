@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrashIcon } from '@heroicons/react/20/solid';
 import { saveNode, deleteNode } from '@/lib/nodes/actions';
 import { formatDate } from '@/lib/format';
 import RichTextView from '@/components/rich-text/RichTextView';
@@ -54,33 +53,28 @@ export default function TimelineEditor({
 
   return (
     <div className="my-4">
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, borderLeft: '2px solid var(--line)' }}>
-        {sorted.map((e) => (
-          <li key={e.id} className="relative pl-5 pb-5">
-            <span
-              aria-hidden
-              style={{ position: 'absolute', left: -5, top: 4, width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }}
-            />
-            <div className="flex items-center gap-3">
-              <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>{formatDate(e.at)}</span>
-              <button type="button" className="muted-link" title="Delete" disabled={pending} onClick={() => remove(e.id)}>
-                <TrashIcon className="h-3.5 w-3.5" aria-hidden />
-              </button>
+      {sorted.length > 0 ? (
+        <div className="dive">
+          {sorted.map((e, i) => (
+            <div key={e.id} className={i === 0 ? 'dstop now' : 'dstop'}>
+              <div className="flex items-center gap-3">
+                <span className="dd">{formatDate(e.at)}</span>
+                <button type="button" className="muted-link" title="Delete" aria-label="Delete entry" disabled={pending} onClick={() => remove(e.id)}>
+                  ✕
+                </button>
+              </div>
+              <RichTextView value={e.note ?? ''} />
             </div>
-            <RichTextView value={e.note ?? ''} />
-          </li>
-        ))}
-        {sorted.length === 0 && (
-          <li className="pl-5 pb-2 text-[13px]" style={{ color: 'var(--muted-2)' }}>
-            No timeline entries yet.
-          </li>
-        )}
-      </ul>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[13px]" style={{ color: 'var(--muted)' }}>No timeline entries yet.</p>
+      )}
 
-      <div className="mt-2 flex flex-col gap-2" style={{ maxWidth: 560 }}>
+      <div className="mt-6 flex flex-col gap-2" style={{ maxWidth: 560 }}>
         <div className="flex items-center gap-2">
           <DatePicker value={at} onChange={setAt} ariaLabel="Entry time" />
-          <span className="text-[12px]" style={{ color: 'var(--muted-2)' }}>Markdown supported</span>
+          <span className="text-[12px]" style={{ color: 'var(--muted)' }}>Markdown supported</span>
         </div>
         <RichText key={editorKey} value="" onChange={setNote} />
         <div>

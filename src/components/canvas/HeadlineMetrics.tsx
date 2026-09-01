@@ -6,71 +6,43 @@ export interface Metric {
 
 interface HeadlineMetricsProps {
   metrics: Metric[];
+  /**
+   * `stats` — the hairline strip (`.stats`/`.stat`), which auto-fits however
+   * many measures it is given. `slates` — the floating figures
+   * (`.slates`/`.slate`), which give a `note` line room to breathe and don't
+   * leave empty cells when there are fewer than three metrics. Default 'stats'.
+   */
+  variant?: 'stats' | 'slates';
 }
 
-/**
- * Big numbers across in a hairline grid. Borders only — no background
- * fills. Container carries top + left; cells carry right + bottom
- * internal lines.
- */
-export default function HeadlineMetrics({ metrics }: HeadlineMetricsProps) {
+/** Big numbers, canvas idiom: `.stats` for a clean fixed grid of measures,
+ *  `.slates` when a note line (e.g. "42% covered") needs room. */
+export default function HeadlineMetrics({ metrics, variant = 'stats' }: HeadlineMetricsProps) {
+  if (variant === 'slates') {
+    return (
+      <div className="slates">
+        {metrics.map((m) => (
+          <div key={m.label} className="slate">
+            <b>{m.value}</b>
+            <span>{m.label}</span>
+            {m.note && <span className="ssub">{m.note}</span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <section
-      className="my-12 grid grid-cols-1 sm:grid-cols-3"
-      style={{
-        borderTop: '1px solid var(--line)',
-        borderLeft: '1px solid var(--line)',
-      }}
-    >
+    <div className="stats">
       {metrics.map((m) => (
-        <div
-          key={m.label}
-          className="p-5"
-          style={{
-            background: 'transparent',
-            borderRight: '1px solid var(--line)',
-            borderBottom: '1px solid var(--line)',
-          }}
-        >
-          <p
-            className="mono"
-            style={{
-              fontSize: 10,
-              fontWeight: 500,
-              letterSpacing: '0.12em',
-              color: 'var(--muted-2)',
-              textTransform: 'uppercase',
-            }}
-          >
-            {m.label}
-          </p>
-          <p
-            className="mono"
-            style={{
-              fontSize: 36,
-              fontWeight: 500,
-              color: 'var(--ink)',
-              letterSpacing: '-0.02em',
-              marginTop: 6,
-              lineHeight: 1.1,
-            }}
-          >
-            {m.value}
-          </p>
+        <div key={m.label} className="stat">
+          <b>{m.value}</b>
+          <span>{m.label}</span>
           {m.note && (
-            <p
-              style={{
-                fontSize: 12,
-                color: 'var(--muted)',
-                marginTop: 6,
-                lineHeight: 1.5,
-              }}
-            >
-              {m.note}
-            </p>
+            <p style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{m.note}</p>
           )}
         </div>
       ))}
-    </section>
+    </div>
   );
 }

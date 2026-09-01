@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
 import {
   ResponsiveContainer,
   PieChart,
@@ -18,6 +17,7 @@ import {
 } from 'recharts';
 import RichTextView from '@/components/rich-text/RichTextView';
 import RiskMatrix from '@/components/reports/RiskMatrix';
+import DataTable, { type Column } from '@/components/ui/DataTable';
 import type { WidgetConfig, WidgetData, WidgetInstance } from '@/lib/dashboard/types';
 
 // Theme-aware series slots: dark canvas runs lightest→darkest, light canvas
@@ -30,14 +30,21 @@ const SERIES = [
   'var(--series-5)',
   'var(--series-6)',
 ];
-const axisTick = { fontSize: 10, fontFamily: 'var(--font-mono)', fill: 'var(--muted-2)' };
-const TOOLTIP: CSSProperties = { fontSize: 12, background: 'var(--bg-elev)', border: '1px solid var(--line-strong)', color: 'var(--ink)' };
-const TH: CSSProperties = { fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', padding: '7px 10px', background: 'var(--bg-alt)', borderBottom: '1px solid var(--line)', textAlign: 'left', position: 'sticky', top: 0 };
-const TD: CSSProperties = { padding: '7px 10px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap' };
+const axisTick = { fontSize: 10, fontFamily: 'var(--font-mono)', fill: 'var(--muted)' };
+// Recharts' own Tooltip chrome, restyled onto the shared card tokens — the
+// same fallback RedTrend.tsx (src/components/red/) uses; there's no proven
+// fireTip()/VizTip wiring for recharts hover in this codebase yet.
+const TOOLTIP = { fontSize: 12, background: 'var(--card)', border: '1px solid var(--card-line)', color: 'var(--fg)' };
+
+/** Thousands-separated integer, no locale-dependent formatter (deterministic,
+ *  matches src/lib/format.ts's own separate() helper). */
+function fmtCount(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-full w-full items-center justify-center text-center text-[13px]" style={{ color: 'var(--muted-2)', minHeight: 80 }}>
+    <div className="flex h-full w-full items-center justify-center text-center text-[13px]" style={{ color: 'var(--muted)', minHeight: 80 }}>
       {children}
     </div>
   );
@@ -59,66 +66,23 @@ function measureLabel(config: WidgetConfig): string {
 
 function KpiBody({ value, label }: { value: number; label: string }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center text-center">
-      <span className="mono" style={{ fontSize: 40, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-        {value.toLocaleString()}
-      </span>
-      <span className="mono" style={{ fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginTop: 8 }}>
-        {label}
-      </span>
+    <div className="slate flex h-full w-full flex-col items-center justify-center text-center">
+      <b>{fmtCount(value)}</b>
+      <span>{label}</span>
     </div>
   );
 }
 
 function TableBody({ columns, rows }: { columns: string[]; rows: string[][] }) {
-  // Sort by column index; local state so a refresh resets it.
-  const [sort, setSort] = useState<{ i: number; dir: 'asc' | 'desc' } | null>(null);
   if (rows.length === 0) return <Centered>No rows</Centered>;
-
-  const sorted = sort
-    ? [...rows].sort(
-        (a, b) =>
-          (sort.dir === 'asc' ? 1 : -1) *
-          String(a[sort.i] ?? '').localeCompare(String(b[sort.i] ?? ''), undefined, { numeric: true, sensitivity: 'base' }),
-      )
-    : rows;
-  const toggle = (i: number) =>
-    setSort((s) => (!s || s.i !== i ? { i, dir: 'asc' } : s.dir === 'asc' ? { i, dir: 'desc' } : null));
-
-  return (
-    <table className="w-full text-[13px]" style={{ borderCollapse: 'collapse' }}>
-      <thead>
-        <tr>
-          {columns.map((c, ci) => {
-            const activeSort = sort?.i === ci ? sort : null;
-            return (
-              <th
-                key={c}
-                className="mono"
-                style={{ ...TH, cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => toggle(ci)}
-                aria-sort={activeSort ? (activeSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-              >
-                {c}
-                {activeSort && <span style={{ color: 'var(--accent)' }}>{activeSort.dir === 'asc' ? ' ▲' : ' ▼'}</span>}
-              </th>
-            );
-          })}
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map((r, ri) => (
-          <tr key={ri}>
-            {r.map((cell, ci) => (
-              <td key={ci} style={{ ...TD, color: ci === 0 ? 'var(--ink)' : 'var(--muted)', fontWeight: ci === 0 ? 500 : 400 }}>
-                {cell || '–'}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+  const cols: Column<string[]>[] = columns.map((c, ci) => ({
+    key: String(ci),
+    header: c,
+    cell: (r) => r[ci] || '–',
+    sortValue: (r) => r[ci] ?? '',
+    cellStyle: ci === 0 ? { color: 'var(--fg)', fontWeight: 500 } : { color: 'var(--muted)' },
+  }));
+  return <DataTable columns={cols} rows={rows} getRowKey={(_, i) => i} empty="No rows" />;
 }
 
 function DonutBody({ data }: { data: { name: string; value: number }[] }) {
@@ -155,7 +119,7 @@ function BarBody({ data }: { data: { name: string; value: number }[] }) {
         <CartesianGrid vertical={false} stroke="var(--line)" />
         <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: 'var(--line)' }} interval={0} />
         <YAxis tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} />
-        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={TOOLTIP} />
+        <Tooltip cursor={{ fill: 'var(--ghost)' }} contentStyle={TOOLTIP} />
         <Bar dataKey="value" fill="var(--accent)" />
       </BarChart>
     </ChartFrame>
@@ -170,7 +134,7 @@ function StackedBarBody({ keys, data }: { keys: string[]; data: Record<string, s
         <CartesianGrid vertical={false} stroke="var(--line)" />
         <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={{ stroke: 'var(--line)' }} interval={0} />
         <YAxis tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} />
-        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={TOOLTIP} />
+        <Tooltip cursor={{ fill: 'var(--ghost)' }} contentStyle={TOOLTIP} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
         {keys.map((k, i) => <Bar key={k} dataKey={k} stackId="s" fill={SERIES[i % SERIES.length]} />)}
       </BarChart>
@@ -198,7 +162,7 @@ function LineBody({ keys, data }: { keys: string[]; data: Record<string, string 
 
 function NoteBody({ markdown }: { markdown: string }) {
   if (!markdown.trim()) return <Centered>Empty note. Configure to add text.</Centered>;
-  return <div className="text-[14px]" style={{ color: 'var(--ink)' }}><RichTextView value={markdown} /></div>;
+  return <div className="text-[14px]" style={{ color: 'var(--fg)' }}><RichTextView value={markdown} /></div>;
 }
 
 export function WidgetBody({ instance, data }: { instance: WidgetInstance; data: WidgetData | null }) {

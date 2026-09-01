@@ -15,7 +15,7 @@ export default function UsersTable({ users }: { users: UserRow[] }) {
     {
       key: 'name',
       header: 'User',
-      cell: (u) => <span style={{ color: 'var(--ink)' }}>{u.name ?? '–'}</span>,
+      cell: (u) => <span style={{ color: 'var(--fg)' }}>{u.name ?? '–'}</span>,
       sortValue: (u) => (u.name ?? '').toLowerCase(),
     },
     {

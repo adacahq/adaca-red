@@ -1,6 +1,5 @@
 'use client';
 
-import { XMarkIcon } from '@heroicons/react/20/solid';
 import Select from '@/components/ui/Select';
 import { useUsers, userLabel } from './UsersContext';
 
@@ -54,16 +53,17 @@ export function UsersSelect({
             <span
               key={id}
               className="inline-flex items-center gap-1"
-              style={{ fontSize: 12, padding: '2px 4px 2px 8px', border: '1px solid var(--line)', background: 'var(--bg-alt)' }}
+              style={{ fontSize: 12, padding: '2px 4px 2px 8px', border: '1px solid var(--line)', background: 'var(--card)' }}
             >
               {userLabel(users, id)}
               <button
                 type="button"
                 className="muted-link"
                 title="Remove"
+                aria-label={`Remove ${userLabel(users, id)}`}
                 onClick={() => onChange(selected.filter((x) => x !== id))}
               >
-                <XMarkIcon className="h-3.5 w-3.5" aria-hidden />
+                ✕
               </button>
             </span>
           ))}

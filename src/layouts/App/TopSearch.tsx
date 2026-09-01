@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { searchAll, type SearchGroup } from '@/lib/nodes/search';
 import Chip from '@/components/entity/Chips';
 
@@ -89,13 +88,6 @@ export default function TopSearch() {
 
   return (
     <div ref={boxRef} className="relative w-full max-w-xs">
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 flex items-center"
-        style={{ paddingLeft: 10, color: 'var(--muted-2)' }}
-      >
-        <MagnifyingGlassIcon className="h-4 w-4" />
-      </span>
       <input
         type="search"
         value={q}
@@ -107,41 +99,21 @@ export default function TopSearch() {
         onKeyDown={onKeyDown}
         placeholder="Search…"
         className="field-input"
-        style={{ fontSize: 13, padding: '6px 11px 6px 32px' }}
+        style={{ fontSize: 13, padding: '8px 12px' }}
         aria-label="Search"
         autoComplete="off"
       />
 
       {showPanel && (
-        <div
-          className="absolute left-0 z-[80] mt-1 w-[min(420px,90vw)] overflow-hidden"
-          style={{ background: 'var(--bg-elev)', border: '1px solid var(--line-strong)' }}
-        >
-          {loading && flat.length === 0 && (
-            <p className="px-3 py-3 text-[13px]" style={{ color: 'var(--muted-2)' }}>Searching…</p>
-          )}
+        <div className="tbpanel w-[min(420px,90vw)]">
+          {loading && flat.length === 0 && <p className="mono-micro px-2 py-2">Searching…</p>}
           {!loading && flat.length === 0 && (
-            <p className="px-3 py-3 text-[13px]" style={{ color: 'var(--muted-2)' }}>
-              No matches for &ldquo;{q.trim()}&rdquo;.
-            </p>
+            <p className="mono-micro px-2 py-2">No matches for &ldquo;{q.trim()}&rdquo;.</p>
           )}
-          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+          <div className="max-h-[360px] overflow-y-auto">
             {groups.map((g, gi) => (
               <div key={g.key}>
-                <p
-                  className="mono"
-                  style={{
-                    fontSize: 9,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted-2)',
-                    padding: '8px 12px 4px',
-                    background: 'var(--bg-alt)',
-                    borderBottom: '1px solid var(--line)',
-                  }}
-                >
-                  {g.label}
-                </p>
+                <p className="mono-micro px-2 pb-1 pt-2">{g.label}</p>
                 {g.rows.map((r, ri) => {
                   const i = groupOffsets[gi] + ri;
                   const href = `${g.base}/${r.id}`;
@@ -154,14 +126,10 @@ export default function TopSearch() {
                         e.preventDefault();
                         go(href);
                       }}
-                      className="flex w-full items-center gap-2 text-left"
-                      style={{
-                        padding: '8px 12px',
-                        background: active === i ? 'rgba(255,255,255,0.05)' : 'transparent',
-                        borderBottom: '1px solid var(--line)',
-                      }}
+                      className="tbrow w-full justify-between"
+                      style={{ background: active === i ? 'var(--ghost)' : undefined }}
                     >
-                      <span style={{ flex: 1, fontSize: 13.5, color: 'var(--ink)' }}>{r.title}</span>
+                      <span className="flex-1 truncate text-left">{r.title}</span>
                       {r.status && <Chip value={r.status} />}
                     </button>
                   );
@@ -177,15 +145,7 @@ export default function TopSearch() {
                 setOpen(false);
                 router.push(`/search?q=${encodeURIComponent(q.trim())}`);
               }}
-              className="mono flex w-full items-center justify-between"
-              style={{
-                fontSize: 10,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'var(--muted)',
-                padding: '9px 12px',
-                background: 'var(--bg-alt)',
-              }}
+              className="tbrow w-full justify-between"
             >
               <span>All results</span>
               <span style={{ color: 'var(--accent)' }}>↵</span>

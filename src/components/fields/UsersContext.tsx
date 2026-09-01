@@ -21,7 +21,7 @@ export function userLabel(meta: UserMeta, id: string): string {
   return u?.name ?? u?.email ?? id;
 }
 
-const DASH = <span style={{ color: 'var(--muted-2)' }}>–</span>;
+const DASH = <span style={{ color: 'var(--muted)' }}>–</span>;
 
 /** Client island: render a single user id as a name (usable in server trees). */
 export function UserName({ id }: { id: string }) {

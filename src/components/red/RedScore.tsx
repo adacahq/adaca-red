@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { readRed, redTotal } from '@/lib/red';
 
 // Deterministic RED ramp (spec §9.1): R light → D deep.
@@ -7,7 +8,8 @@ const AXIS_COLORS = {
   duration: 'var(--accent-3)',
 } as const;
 
-/** Compact read-only RED readout: R/E/D values + total /12, with axis swatches. */
+/** Compact read-only RED readout: R/E/D swatches, then the total on a slim
+ *  `.pbar` (0–12) — the inline idiom, sized for a hairline list row. */
 export default function RedScore({ data }: { data: unknown }) {
   const r = readRed(data);
   const total = redTotal(r);
@@ -30,8 +32,13 @@ export default function RedScore({ data }: { data: unknown }) {
           </span>
         </span>
       ))}
-      <span className="mono" style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink)' }}>
-        {total}/12
+      <span className="inline-flex items-center gap-2">
+        <span className="pbar inline-block w-14">
+          <i style={{ '--w': `${(total / 12) * 100}%`, background: 'var(--accent-2)' } as CSSProperties} />
+        </span>
+        <span className="mono" style={{ fontSize: 11, fontWeight: 500, color: 'var(--fg)' }}>
+          {total}/12
+        </span>
       </span>
     </span>
   );

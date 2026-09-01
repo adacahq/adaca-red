@@ -2,7 +2,6 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrashIcon } from '@heroicons/react/20/solid';
 import { deleteNode } from '@/lib/nodes/actions';
 import { useConfirm } from '@/components/ui/Confirm';
 
@@ -35,8 +34,8 @@ export default function DeleteNodeButton({
   }
 
   return (
-    <button type="button" className="btn btn-ghost btn-sm" disabled={pending} onClick={onClick}>
-      {pending ? <span className="spinner" aria-hidden /> : <TrashIcon className="h-4 w-4" aria-hidden />}
+    <button type="button" className="btn btn-ghost sm" disabled={pending} onClick={onClick}>
+      {pending && <span className="spinner" aria-hidden />}
       {label}
     </button>
   );

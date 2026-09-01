@@ -38,8 +38,11 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith('/login') || path.startsWith('/auth');
+  // /d/* is the public no-login surface (forms, run status, reports) — see
+  // docs/workflow-forms-plan.md §4. Data access there is service-role only.
+  const isPublicRoute = path === '/d' || path.startsWith('/d/');
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

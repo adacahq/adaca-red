@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { listNodes } from '@/lib/nodes/queries';
 import HeadlineMetrics from '@/components/canvas/HeadlineMetrics';
@@ -8,20 +9,20 @@ export const metadata = { title: 'Incident analytics · Adaca Red' };
 function Bars({ entries }: { entries: { label: string; count: number }[] }) {
   const max = Math.max(1, ...entries.map((e) => e.count));
   return (
-    <div className="my-4 flex flex-col gap-2" style={{ maxWidth: 520 }}>
+    <div className="mt-4 flex flex-col gap-2.5">
       {entries.map((e) => (
         <div key={e.label} className="flex items-center gap-3">
           <span
             className="mono"
-            style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)', minWidth: 110 }}
+            style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)', minWidth: 100 }}
           >
             {e.label.replace(/_/g, ' ')}
           </span>
           <span
             aria-hidden
-            style={{ height: 12, width: `${(e.count / max) * 100}%`, minWidth: e.count ? 4 : 0, background: 'var(--accent)' }}
+            style={{ height: 12, width: `${(e.count / max) * 100}%`, minWidth: e.count ? 4 : 0, background: 'var(--series-3)' }}
           />
-          <span className="mono" style={{ fontSize: 11, color: 'var(--ink)' }}>{e.count}</span>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--fg)' }}>{e.count}</span>
         </div>
       ))}
     </div>
@@ -49,22 +50,42 @@ export default async function Page() {
   const statusEntries = Object.entries(byStatus).map(([label, count]) => ({ label, count }));
 
   return (
-    <div className="">
-      <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.02em' }}>Incident analytics</h1>
+    <div>
+      <p className="eyebrow rv">Reports</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        Incident analytics
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        {incs.length} incident{incs.length === 1 ? '' : 's'} logged, {open} still open. Severity and status mix
+        below.
+      </p>
 
-      <HeadlineMetrics
-        metrics={[
-          { label: 'Total', value: String(incs.length) },
-          { label: 'Open', value: String(open) },
-          { label: 'SEV1', value: String(bySev['sev1'] ?? 0) },
-        ]}
-      />
+      <div className="rv" style={{ '--i': 3 } as CSSProperties}>
+        <HeadlineMetrics
+          metrics={[
+            { label: 'Total', value: String(incs.length) },
+            { label: 'Open', value: String(open) },
+            { label: 'SEV1', value: String(bySev['sev1'] ?? 0) },
+          ]}
+        />
+      </div>
 
-      <SectionHeader title="By severity" />
-      <Bars entries={sevEntries} />
+      <SectionHeader title="Breakdowns" />
 
-      <SectionHeader title="By status" />
-      <Bars entries={statusEntries.length ? statusEntries : [{ label: '–', count: 0 }]} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 rv" style={{ '--i': 4 } as CSSProperties}>
+        <div className="chart-card">
+          <div className="chart-head">
+            <p className="field-label" style={{ margin: 0 }}>By severity</p>
+          </div>
+          <Bars entries={sevEntries} />
+        </div>
+        <div className="chart-card">
+          <div className="chart-head">
+            <p className="field-label" style={{ margin: 0 }}>By status</p>
+          </div>
+          <Bars entries={statusEntries.length ? statusEntries : [{ label: '–', count: 0 }]} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ export default async function LoginPage({
             fontWeight: 500,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: 'var(--muted-2)',
+            color: 'var(--muted)',
           }}
         >
           Operations · Internal
@@ -38,8 +38,8 @@ export default async function LoginPage({
           <div
             className="mb-5 px-4 py-3 text-[13px]"
             style={{
-              background: 'var(--red-tint)',
-              color: 'var(--red-ink)',
+              background: 'var(--crit-tint)',
+              color: 'var(--crit)',
               border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)',
             }}
           >

@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { PlusIcon } from '@heroicons/react/20/solid';
 import type { ComponentType, SVGProps } from 'react';
 
 export interface EmptyStateAction {
@@ -8,12 +7,13 @@ export interface EmptyStateAction {
 }
 
 /**
- * On-brand empty state: a hairline panel over the dot-grid, a framed icon, an
- * eyebrow, a headline, a line of guidance, and an optional primary action.
- * Used wherever a list or panel has nothing to show yet.
+ * On-brand empty state: the `.empty` dashed panel, a mono eyebrow, a
+ * headline, an optional line of guidance, and a primary action. `icon` is
+ * accepted for API compatibility with existing callers but no longer
+ * rendered — the framed icon and the `.canvas-grid` panel are gone under
+ * Canvas; `.empty`'s dashed hairline carries the whole treatment now.
  */
 export default function EmptyState({
-  icon: Icon,
   eyebrow = 'Empty',
   title,
   description,
@@ -26,51 +26,15 @@ export default function EmptyState({
   action?: EmptyStateAction;
 }) {
   return (
-    <div
-      className="canvas-grid relative my-4 flex flex-col items-center justify-center text-center"
-      style={{
-        border: '1px solid var(--line)',
-        padding: '72px 32px',
-        background: 'var(--bg-alt)',
-      }}
-    >
-      {Icon && (
-        <span
-          aria-hidden
-          className="inline-flex items-center justify-center"
-          style={{
-            width: 44,
-            height: 44,
-            marginBottom: 24,
-            border: '1px solid var(--line-strong)',
-            color: 'var(--accent)',
-            background: 'var(--bg)',
-          }}
-        >
-          <Icon className="h-5 w-5" />
-        </span>
-      )}
-
-      <span
-        className="mono"
-        style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--muted-2)' }}
-      >
-        {eyebrow}
-      </span>
-
-      <h3 style={{ marginTop: 14, fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
+    <div className="empty my-4">
+      <span className="zone-label">{eyebrow}</span>
+      <h3 className="mt-3.5" style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--fg)' }}>
         {title}
       </h3>
-
-      {description && (
-        <p style={{ marginTop: 10, fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 420 }}>
-          {description}
-        </p>
-      )}
-
+      {description && <p>{description}</p>}
       {action && (
-        <Link href={action.href} className="btn btn-primary btn-sm" style={{ marginTop: 32 }}>
-          <PlusIcon className="h-4 w-4" aria-hidden /> {action.label}
+        <Link href={action.href} className="btn btn-primary btn-sm mt-5">
+          + {action.label}
         </Link>
       )}
     </div>

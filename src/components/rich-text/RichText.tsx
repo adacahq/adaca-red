@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Popover } from '@headlessui/react';
-import { LinkIcon } from '@heroicons/react/20/solid';
+import { useEffect, useRef, useState } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -51,60 +49,89 @@ function Tool({ children, onClick, title }: { children: React.ReactNode; onClick
   );
 }
 
+/** Link tool: a plain-React popover (no Headless UI) — closes on Escape, on
+ *  an outside click, or once a link is applied/removed. */
 function LinkButton() {
   const [editor] = useLexicalComposerContext();
+  const [open, setOpen] = useState(false);
   const [url, setUrl] = useState('');
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  function apply() {
+    editor.dispatchCommand(TOGGLE_LINK_COMMAND, url || null);
+    setUrl('');
+    setOpen(false);
+  }
+  function unlink() {
+    editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+    setOpen(false);
+  }
+
   return (
-    <Popover className="inline-flex">
-      <Popover.Button className="lexical-tool" title="Link" aria-label="Link" onMouseDown={(e) => e.preventDefault()}>
-        <LinkIcon className="h-3.5 w-3.5" aria-hidden />
-      </Popover.Button>
-      <Popover.Panel
-        anchor={{ to: 'bottom start', gap: 4 }}
-        className="z-[80] flex items-center gap-2"
-        style={{ background: 'var(--bg-elev)', border: '1px solid var(--line-strong)', padding: 8 }}
+    <div ref={wrapRef} className="inline-flex" style={{ position: 'relative' }}>
+      <button
+        type="button"
+        className="lexical-tool"
+        title="Link"
+        aria-label="Link"
+        aria-expanded={open}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setOpen((o) => !o)}
       >
-        {({ close }) => (
-          <>
-            <input
-              className="field-input"
-              style={{ width: 200, fontSize: 13 }}
-              placeholder="https://…"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  editor.dispatchCommand(TOGGLE_LINK_COMMAND, url || null);
-                  setUrl('');
-                  close();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                editor.dispatchCommand(TOGGLE_LINK_COMMAND, url || null);
-                setUrl('');
-                close();
-              }}
-            >
-              Apply
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-                close();
-              }}
-            >
-              Unlink
-            </button>
-          </>
-        )}
-      </Popover.Panel>
-    </Popover>
+        Link
+      </button>
+      {open && (
+        <div
+          className="flex items-center gap-2"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            zIndex: 80,
+            background: 'var(--bg)',
+            border: '1px solid var(--line)',
+            borderRadius: 10,
+            padding: 8,
+          }}
+        >
+          <input
+            className="field-input"
+            style={{ width: 200, fontSize: 13 }}
+            placeholder="https://…"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                apply();
+              }
+            }}
+          />
+          <button type="button" className="btn btn-primary btn-sm" onClick={apply}>
+            Apply
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={unlink}>
+            Unlink
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

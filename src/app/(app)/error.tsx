@@ -5,7 +5,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
     <div className="py-12">
       <span
         className="mono"
-        style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--red-ink)', textTransform: 'uppercase' }}
+        style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--crit)', textTransform: 'uppercase' }}
       >
         Something went wrong
       </span>

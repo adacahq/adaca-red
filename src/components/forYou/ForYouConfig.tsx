@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Bars2Icon } from '@heroicons/react/20/solid';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import type { ForYouConfig as Config } from '@/lib/forYou/types';
@@ -84,7 +83,7 @@ export default function ForYouConfig({
           <p className="field-label">Types</p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             {typeOptions.map((t) => (
-              <label key={t.key} className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--ink)' }}>
+              <label key={t.key} className="check">
                 <input type="checkbox" checked={types.includes(t.key)} onChange={() => toggleType(t.key)} />
                 {t.label}
               </label>
@@ -119,11 +118,14 @@ export default function ForYouConfig({
                 setOverIdx(null);
               }}
               title="Drag to reorder"
-              style={{ cursor: 'grab', color: 'var(--muted-2)' }}
+              className="shrink-0"
+              style={{ cursor: 'grab', color: 'var(--muted)' }}
             >
-              <Bars2Icon className="h-4 w-4" aria-hidden />
+              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+                <path d="M1 1h10M1 7h10" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
             </span>
-            <label className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--ink)', flex: 1 }}>
+            <label className="check" style={{ flex: 1 }}>
               <input type="checkbox" checked={selected.includes(key)} onChange={() => toggleCol(key)} />
               {labelOf[key] ?? key}
             </label>

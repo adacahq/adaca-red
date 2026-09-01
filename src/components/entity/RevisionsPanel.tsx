@@ -18,28 +18,20 @@ export default async function RevisionsPanel({
   const nameById = Object.fromEntries(users.map((u) => [u.id, u.name ?? u.email ?? '–']));
 
   if (revs.length === 0) {
-    return <p className="text-[13px]" style={{ color: 'var(--muted-2)' }}>No history yet.</p>;
+    return <p className="text-[13px]" style={{ color: 'var(--muted)' }}>No history yet.</p>;
   }
 
   return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: 0, borderTop: '1px solid var(--line)' }}>
+    <div className="feed">
       {revs.map((r) => (
-        <li
-          key={r.id}
-          className="flex items-baseline gap-4 py-3"
-          style={{ borderBottom: '1px solid var(--line)' }}
-        >
-          <span className="mono" style={{ fontSize: 10, color: 'var(--muted-2)', minWidth: 40 }}>
+        <div className="evt" key={r.id}>
+          <span className="t">{formatDate(r.created_at)}</span>
+          <span className="mono" style={{ fontSize: 10, color: 'var(--muted)' }}>
             r{r.rev_no}
-          </span>
-          <span style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>
-            {r.change_note ?? 'Updated'}
-          </span>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            {nameById[r.author_id ?? ''] ?? '–'} · {formatDate(r.created_at)}
-          </span>
-        </li>
+          </span>{' '}
+          <b>{nameById[r.author_id ?? ''] ?? 'Someone'}</b> {r.change_note ?? 'updated this record'}
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }

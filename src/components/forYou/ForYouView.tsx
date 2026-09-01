@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Cog6ToothIcon } from '@heroicons/react/20/solid';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import FieldValue from '@/components/fields/FieldValue';
 import { sortValueFor } from '@/components/entity/RegisterTable';
@@ -18,7 +17,7 @@ export interface TypeMeta {
   fields: FieldDef[];
 }
 
-const EMPTY = <span style={{ color: 'var(--muted-2)' }}>–</span>;
+const EMPTY = <span style={{ color: 'var(--muted)' }}>–</span>;
 
 /** Available columns across the For-You types: Type, Title, then the union of
  *  every other field key (label from the first type that declares it). */
@@ -116,7 +115,7 @@ export default function ForYouView({
     <div>
       <div className="mb-2 flex justify-end">
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfigOpen(true)}>
-          <Cog6ToothIcon className="h-4 w-4" aria-hidden /> Configure
+          Configure
         </button>
       </div>
 

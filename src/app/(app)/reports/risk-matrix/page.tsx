@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { listNodes } from '@/lib/nodes/queries';
 import RiskMatrix from '@/components/reports/RiskMatrix';
@@ -22,12 +23,18 @@ export default async function Page() {
   }
 
   return (
-    <div className="">
-      <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.02em' }}>Risk matrix</h1>
-      <p className="mt-2 text-[14px]" style={{ color: 'var(--muted)' }}>
-        Inherent exposure (likelihood × impact). {risks.length} risks plotted. Hover a cell to see its risks.
+    <div>
+      <p className="eyebrow rv">Reports</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        Risk matrix
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        Inherent exposure — likelihood × impact — across {risks.length} risk{risks.length === 1 ? '' : 's'} in the
+        register, before any mitigation is counted. Hover or focus a cell to see what&rsquo;s in it.
       </p>
-      <RiskMatrix buckets={buckets} />
+      <div className="rv" style={{ '--i': 3 } as CSSProperties}>
+        <RiskMatrix buckets={buckets} />
+      </div>
     </div>
   );
 }

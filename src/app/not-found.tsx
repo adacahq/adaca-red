@@ -5,7 +5,7 @@ export default function NotFound() {
     <div className="py-12">
       <span
         className="mono"
-        style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--muted-2)', textTransform: 'uppercase' }}
+        style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--muted)', textTransform: 'uppercase' }}
       >
         404
       </span>

@@ -5,8 +5,6 @@ import 'react-grid-layout/css/styles.css';
 import { useRef, useState } from 'react';
 import GridLayout, { useContainerWidth } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
-import { PlusIcon, PencilSquareIcon, CheckIcon } from '@heroicons/react/20/solid';
-import { Squares2X2Icon } from '@heroicons/react/24/outline';
 import WidgetView from './WidgetView';
 import WidgetBuilder, { type WidgetDraft } from './WidgetBuilder';
 import { WIDGET_BY_TYPE } from '@/lib/dashboard/widgets';
@@ -130,45 +128,36 @@ export default function DashboardGrid({
 
   return (
     <div>
-      <div className="mt-6 mb-3 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-2">
         <span style={{ flex: 1 }} />
         {editing ? (
           <>
             <button type="button" className="btn btn-ghost btn-sm" onClick={openAdd}>
-              <PlusIcon className="h-4 w-4" aria-hidden /> Add widget
+              + Add widget
             </button>
             <button type="button" className="btn btn-primary btn-sm" onClick={toggleEditing}>
-              <CheckIcon className="h-4 w-4" aria-hidden /> Done
+              Done
             </button>
           </>
         ) : (
           <button type="button" className="btn btn-ghost btn-sm" onClick={toggleEditing}>
-            <PencilSquareIcon className="h-4 w-4" aria-hidden /> Customise
+            Customise
           </button>
         )}
       </div>
 
       {items.length === 0 ? (
-        <div
-          className="canvas-grid flex flex-col items-center justify-center text-center"
-          style={{ border: '1px solid var(--line)', padding: '64px 24px', background: 'var(--bg-alt)' }}
-        >
-          <span
-            aria-hidden
-            className="mb-5 inline-flex items-center justify-center"
-            style={{ width: 44, height: 44, border: '1px solid var(--line-strong)', color: 'var(--accent)', background: 'var(--bg)' }}
-          >
-            <Squares2X2Icon className="h-5 w-5" />
-          </span>
-          <span className="mono" style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>
-            Dashboard
-          </span>
-          <h3 className="mt-2" style={{ fontSize: 18, fontWeight: 500, color: 'var(--ink)' }}>Your dashboard is empty</h3>
-          <p className="mt-2" style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 420 }}>
-            Build your own view: add KPIs, charts, tables and notes from the operations data.
-          </p>
-          <button type="button" className="btn btn-primary btn-sm mt-6" onClick={openAdd}>
-            <PlusIcon className="h-4 w-4" aria-hidden /> Add your first widget
+        // Same markup as EmptyState (`.empty` + `.zone-label`) — EmptyState's
+        // own action is href-only (a Link); this one opens the builder modal,
+        // so it's hand-rolled here rather than editing the shared primitive.
+        <div className="empty">
+          <span className="zone-label">Dashboard</span>
+          <h3 className="mt-3.5" style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--fg)' }}>
+            Your dashboard is empty
+          </h3>
+          <p>Build your own view: add KPIs, charts, tables and notes from the operations data.</p>
+          <button type="button" className="btn btn-primary btn-sm mt-5" onClick={openAdd}>
+            + Add your first widget
           </button>
         </div>
       ) : (

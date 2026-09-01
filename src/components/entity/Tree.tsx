@@ -2,13 +2,6 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ChevronRightIcon,
-  ChevronDownIcon,
-  PlusIcon,
-  TrashIcon,
-  PencilSquareIcon,
-} from '@heroicons/react/20/solid';
 import type { FieldDef, NodeRow } from '@/lib/supabase/types';
 import { saveNode, deleteNode } from '@/lib/nodes/actions';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -20,6 +13,23 @@ export interface ChildType {
   key: string;
   label: string;
   defaults: Record<string, unknown>;
+}
+
+/** Expand/collapse caret — one glyph, rotated per state (was heroicons'
+ *  ChevronRight/ChevronDown). */
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="6"
+      viewBox="0 0 10 6"
+      fill="none"
+      aria-hidden
+      style={{ transform: open ? 'none' : 'rotate(-90deg)', transition: 'transform 0.3s var(--ease)' }}
+    >
+      <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
 }
 
 export default function Tree({
@@ -136,55 +146,48 @@ export default function Tree({
     const data = (node.data ?? {}) as Record<string, unknown>;
     const isOpen = expanded.has(node.id);
     const addable = childTypesByParent[node.type_key] ?? [];
+    const status = typeof data.status === 'string' ? data.status : undefined;
+    const typeLabel = typeLabels[node.type_key] ?? node.type_key;
+    const extraIndent = depth > 1 ? { paddingLeft: 26 + (depth - 1) * 20 } : undefined;
 
     return (
       <div key={node.id}>
-        <div
-          className="group flex items-center gap-2 py-2"
-          style={{ paddingLeft: depth * 20, borderBottom: '1px solid var(--line)' }}
-        >
-          <button
-            type="button"
-            onClick={() => toggle(node.id)}
-            className="shrink-0"
-            style={{ width: 16, color: 'var(--muted-2)', visibility: children.length ? 'visible' : 'hidden' }}
-            aria-label={isOpen ? 'Collapse' : 'Expand'}
-          >
-            {isOpen ? <ChevronDownIcon className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
-          </button>
-          <span
-            className="mono"
-            style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-2)', minWidth: 56 }}
-          >
-            {typeLabels[node.type_key] ?? node.type_key}
+        <div className={`ms group${depth > 0 ? ' sub' : ''}`} style={extraIndent}>
+          {/* `.id` is a 58px column — a caret plus a label truncates the label
+              to nothing ("Risk group" → "Ris…"). The caret alone keeps the
+              indent honest; the type belongs under the title, which is where
+              `.ms .nm small` already puts a node's meta line. */}
+          <span className="id">
+            <button
+              type="button"
+              onClick={() => toggle(node.id)}
+              style={{ visibility: children.length ? 'visible' : 'hidden', color: 'inherit', display: 'inline-flex' }}
+              aria-label={isOpen ? 'Collapse' : 'Expand'}
+            >
+              <Caret open={isOpen} />
+            </button>
           </span>
-          <button
-            type="button"
-            onClick={() => setEditNode(node)}
-            className="text-left"
-            style={{ fontSize: 14, color: 'var(--ink)', flex: 1 }}
-          >
-            {(data.title as string) || 'Untitled'}
-          </button>
-          {typeof data.status === 'string' && <Chip value={data.status} />}
-          <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button type="button" className="muted-link" title="Edit" onClick={() => setEditNode(node)} disabled={pending}>
-              <PencilSquareIcon className="h-4 w-4" />
+          <span className="nm">
+            <button type="button" onClick={() => setEditNode(node)} className="text-left" style={{ color: 'inherit' }}>
+              {(data.title as string) || 'Untitled'}
             </button>
-            {addable.length > 0 && (
-              <button
-                type="button"
-                className="muted-link"
-                title="Add child"
-                onClick={() => setAddingFor(addingFor === node.id ? null : node.id)}
-                disabled={pending}
-              >
-                <PlusIcon className="h-4 w-4" />
+            <small>{typeLabel}</small>
+          </span>
+          <span className="flex items-center gap-3 justify-end">
+            {status && <Chip value={status} />}
+            <span className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button type="button" className="muted-link mono" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }} onClick={() => setEditNode(node)} disabled={pending}>
+                Edit
               </button>
-            )}
-            <button type="button" className="muted-link" title="Delete" onClick={() => remove(node)} disabled={pending}>
-              <TrashIcon className="h-4 w-4" />
-            </button>
+              {addable.length > 0 && (
+                <button type="button" className="muted-link" onClick={() => setAddingFor(addingFor === node.id ? null : node.id)} disabled={pending} aria-label="Add child">
+                  +
+                </button>
+              )}
+              <button type="button" className="muted-link" onClick={() => remove(node)} disabled={pending} aria-label="Delete">
+                ✕
+              </button>
+            </span>
           </span>
         </div>
 
@@ -202,18 +205,18 @@ export default function Tree({
   const rootAddable = childTypesByParent[rootType] ?? [];
 
   return (
-    <div className="my-4" style={{ borderTop: '1px solid var(--line)' }}>
+    <div className="mstones">
       {topChildren.map((c) => renderRow(c, 0))}
       {topChildren.length === 0 && (
-        <p className="py-3 text-[13px]" style={{ color: 'var(--muted-2)' }}>No items yet.</p>
+        <p className="py-4 text-[13px]" style={{ color: 'var(--muted)' }}>No items yet.</p>
       )}
       {rootAddable.length > 0 && (
-        <div className="pt-3">
+        <div className="pt-4">
           {addingFor === rootId ? (
             <AddRow depth={0} types={rootAddable} onAdd={(t, title) => addChild(rootId, t, title)} />
           ) : (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAddingFor(rootId)} disabled={pending}>
-              <PlusIcon className="h-4 w-4" /> Add item
+            <button type="button" className="btn btn-ghost sm" onClick={() => setAddingFor(rootId)} disabled={pending}>
+              + Add item
             </button>
           )}
         </div>
@@ -268,7 +271,7 @@ function AddRow({
       />
       <button
         type="button"
-        className="btn btn-primary btn-sm"
+        className="btn btn-primary sm"
         disabled={!title.trim() || !t}
         onClick={() => t && onAdd(t, title.trim())}
       >

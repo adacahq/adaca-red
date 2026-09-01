@@ -1,994 +1,677 @@
-# Adaca Red — Design System (Ultra-Dark Canvas)
+# Adaca Red — Design System (Canvas)
 
-> The complete, implementation-ready specification for the Adaca Red visual
-> language. This is the **ultra-dark editorial-canvas** aesthetic established on
-> the public landing page (`adaca-website → src/pages/red/index.astro`). The app
-> must look and feel like a continuation of that page: same palette, same
-> typography, same grammar, same motion.
+> **Single source of truth: `src/app/globals.css`.** Every token, class and
+> value in this document is read from that file, verified by grep at the
+> time of writing. If the two ever disagree, the CSS has changed and this
+> doc is stale — fix the doc, don't guess at what it "should" say.
 >
-> **Reference implementation:** `adaca-website/src/pages/red/index.astro`.
-> When this doc and the page disagree, the page wins — update this doc to match.
->
-> **How to read this:** every section gives the *rule*, the *exact tokens*, and
-> *paste-ready CSS*. Layout is done with Tailwind utilities; **colour is always
-> applied via `var(--token)`**, never hard-coded in components (the one exception
-> is the scroll-spine, explained in §11). This matches the repo convention in
-> `CLAUDE.md` ("colour goes inline via `var(--token)`, layout via Tailwind").
+> This is a **working reference for building a screen**, not a history of
+> the system. The one place it looks backward is §12, where the old idiom
+> catalogue lost some idioms on purpose.
 
 ---
 
-## 0. TL;DR — the five things that make it _this_ design
+## 1. What this is
 
-1. **Near-black, not navy.** Background is `#080a0f`. This is deliberately
-   darker than the marketing site's navy dark (`#15293e`). It is the signature.
-2. **Orange is the _only_ accent.** `#f87854`. One warm colour against a cold
-   near-black. Never introduce a second hue. (The name "Red" is not a colour
-   instruction — see `CLAUDE.md`.)
-3. **Hairlines, never boxes.** 1px borders at `rgba(255,255,255,0.09)`. No
-   border-radius anywhere. No drop shadows on surfaces (glows are allowed as
-   *ambient* light only).
-4. **Mono for machinery, sans for prose.** Geist Mono (uppercase, letter-spaced)
-   for labels, numerals, code, status, data. Geist for headings and body.
-5. **Restraint, then one moment of motion.** A quiet grid; an orchestrated
-   page-load; scroll-reveals; *one* interactive showpiece per view. Never busy.
+Adaca Red runs on **Canvas** — the same design system as the sibling PMO
+app, forked onto its own token values. Two themes, chosen by the operator
+and nothing else:
 
----
+- **Light** — white, the default.
+- **Dark** — deepest ink, opt-in.
 
-## 1. Design principles
+`<html data-theme="light">` is set server-side by the root layout
+(`src/app/layout.tsx`) and drives every colour in the system through one set
+of CSS custom properties. The operator's choice is persisted to
+`localStorage` under the key **`red-theme`** (`ThemeToggle.tsx`), and a
+head script stamps `data-theme="dark"` onto `<html>` **before paint** if
+that's what's stored:
 
-- **Editorial, instrument-like.** The UI reads like a precision document or a
-  control surface: registration marks, zone tags, revision stamps, axis lines,
-  monospaced annotations. Every screen should feel *measured*.
-- **The data is the hero.** Chrome recedes (hairlines, muted labels) so numbers,
-  scores, names and statuses carry the colour and weight.
-- **Cold canvas, warm signal.** The near-black/grey field is neutral and calm;
-  orange marks the one thing that matters in any given context (the active item,
-  the score, the primary action, the graded edge).
-- **Honesty over polish.** Don't invent states or claims in the UI. Empty is
-  empty; "planned" is planned. (Carries the `red.md` lesson: never show a value
-  the system didn't actually compute.)
-- **Deterministic, always.** Colours, especially for scores/series, are derived
-  from data, never random. (Directly fixes `red.md` gotcha #6 — random chart
-  colours that change per render.)
+```js
+// src/app/layout.tsx — runs in <head>, before first paint
+try{if(localStorage.getItem('red-theme')==='dark'){document.documentElement.dataset.theme='dark';}}catch(e){}
+```
+
+That pre-paint stamp is what prevents a flash of the wrong theme on load —
+by the time React hydrates, the DOM attribute is already correct and
+`suppressHydrationWarning` on `<html>` tells React not to complain about the
+mismatch with its own server-rendered `data-theme="light"`.
+
+The same script also stamps `.canvas-motion` onto `<html>` (unless the
+visitor has `prefers-reduced-motion: reduce`) — see §9.
 
 ---
 
-## 2. Hard rules (do / don't)
+## 2. Tokens
 
-**Do**
-- Use `border-radius: 0` on everything. Pills/dots that are intentionally round
-  use `border-radius: 50%` only.
-- Use 1px hairlines for all separation (`var(--line)`), 1px stronger
-  (`var(--line-strong)`) for emphasis.
-- Use the dot-grid background on section surfaces (`.canvas-grid`).
-- Reserve orange for: the single primary action, the active/selected state,
-  scores, the RED/`mitigates` edge, and small accent marks.
-- Use Geist Mono **uppercase + letter-spaced** for every label, tag, status,
-  numeral, timestamp, key, and code token.
-- Provide a visible `:focus-visible` outline (see §12) — the app is interactive.
+### 2.1 Theme-invariant (`:root`)
 
-**Don't**
-- ❌ No rounded corners on cards, inputs, buttons, tags, tables.
-- ❌ No box-shadows for elevation. (Ambient orange *glow* is allowed; a grey
-  drop-shadow to "lift a card" is not.)
-- ❌ No second accent colour. No blue, no green/red status colours *except* the
-  semantic status palette in §8.7, used sparingly.
-- ❌ No emojis in product UI.
-- ❌ No gradients except the defined ambient bloom and the dot-grid radial.
-- ❌ Don't hard-code hex in components — go through tokens.
-- ❌ Don't animate everything. One showpiece per view; the rest is calm.
+These don't change between light and dark:
+
+| Token | Value | Notes |
+|---|---|---|
+| `--blue` | `#2074ef` | Used once, for `::selection` — deliberately does **not** track the theme's `--accent` (light's accent happens to equal it; dark's doesn't). |
+| `--ease` | `cubic-bezier(0.22, 0.8, 0.26, 1)` | The one easing curve in the system — every transition, from a 0.12s hover to the 0.9s theme cross-fade, uses it. |
+| `--sb-w` | `264px` | Sidebar rail width. Collapses to `0px` under a `@media (max-width: 900px)` override once the rail becomes an off-canvas drawer. |
+| `--font-sans` | `'Geist', system-ui, sans-serif` | Prose, headings, names. |
+| `--font-mono` | `'Geist Mono', ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', monospace` | Every label, unit, ID, figure, button. |
+| `--amber` / `--red` / `--green` | `#c9862b` / `#d95e4a` / `#2f9e77` | The three raw semantic hues. Same value in both themes; `--warn`/`--crit`/`--ok` alias them (§4). |
+
+Fonts load via a plain CSS `@import` at the top of `globals.css` (Geist
+weights 300/400/500/600/700, Geist Mono 300/400/500) — **not** `next/font`.
+
+The RED analysis ramp (`--accent-1/2/3`, `--accent-tint`, `--chart-1..6`,
+default `--series-1..6`) also lives in this theme-invariant block — see §3.
+
+### 2.2 Light theme (default — `html`, `html[data-theme='light']`)
+
+| Token | Value |
+|---|---|
+| `--bg` | `#ffffff` |
+| `--fg` | `#15293e` |
+| `--muted` | `#5a6e86` |
+| `--line` | `rgba(21, 41, 62, 0.12)` |
+| `--card` | `#f6f8fb` |
+| `--card-line` | `rgba(21, 41, 62, 0.1)` |
+| `--ghost` | `rgba(21, 41, 62, 0.045)` |
+| `--accent` | `#2074ef` |
+| `--accent-ink` | `var(--bg)` → resolves white |
+| `--info` | `#2a7f8f` |
+| `--select-chevron` | an inline SVG data-URI, chevron stroke baked as `#5a6e86` (this theme's `--muted`) |
+
+### 2.3 Dark theme (opt-in — `html[data-theme='dark']`)
+
+| Token | Value |
+|---|---|
+| `--bg` | `#0a1524` |
+| `--fg` | `#f2f6fb` |
+| `--muted` | `#8598ae` |
+| `--line` | `rgba(242, 246, 251, 0.12)` |
+| `--card` | `rgba(255, 255, 255, 0.045)` |
+| `--card-line` | `rgba(242, 246, 251, 0.1)` |
+| `--ghost` | `rgba(255, 255, 255, 0.055)` |
+| `--accent` | `#6fb2ff` |
+| `--accent-ink` | `var(--bg)` → resolves near-black |
+| `--info` | `#6fd0e0` |
+| `--select-chevron` | same SVG, stroke baked as `#8598ae` (this theme's `--muted`) |
+
+Every themed property (`--bg`, `--fg`, `--card`, borders, etc.) that a
+component reads is set to transition over the same `0.9s var(--ease)` used
+on `html`/`body`, so flipping the toggle cross-fades the whole screen at
+once rather than snapping section by section.
 
 ---
 
-## 3. Colour system
+## 3. The two colour layers — chrome vs data
 
-### 3.1 Core palette (the canonical app theme)
+**This is the most important rule in the file.**
 
-These are the exact tokens from `.red-root`. They are the app's default theme.
+`--accent` (blue: `#2074ef` light / `#6fb2ff` dark) is **chrome**: the
+sidebar's active nav item, `.btn-primary`, links, focus rings, the "you are
+here" state on tabs and segmented controls. It is the operator's own
+colour — the one thing that says "this is interactive, this is where you
+are."
+
+The **orange ramp is data, never chrome**, and it lives entirely inside the
+theme-invariant `:root` block (§2.1) so it does not change with the theme —
+only the blue chrome does:
 
 | Token | Value | Role |
 |---|---|---|
-| `--bg` | `#080a0f` | Page background (near-black, cool) |
-| `--bg-alt` | `#0e131c` | Raised surface: cards, panels, table header, inputs |
-| `--bg-elev` | `#11161f` | Hover/elevated surface (cards on hover, photo bg) |
-| `--bg-deep` | `#05070b` | Recessed surface: code/terminal blocks, wells |
-| `--ink` | `#eef2f8` | Primary text on dark |
-| `--ink-2` | `#c6d0dd` | Secondary text / lead paragraphs |
-| `--muted` | `#8b97a8` | Tertiary text, descriptions |
-| `--muted-2` | `#7a8595` | Quaternary: micro-labels, scale ticks, disabled |
-| `--line` | `rgba(255,255,255,0.09)` | Hairline borders, dividers, grid cell gaps |
-| `--line-strong` | `rgba(255,255,255,0.18)` | Emphasised borders, input underlines |
-| `--accent` | `#f87854` | **The** accent (orange). Primary actions, active states |
-| `--accent-hover` | `#fa8d6f` | Accent hover |
-| `--orange` | `#f87854` | Alias of accent (kept for canvas-component parity) |
-| `--grid-dot` | `rgba(255,255,255,0.05)` | Dot-grid texture colour |
-| `--white` | `#ffffff` | Pure white — headings only, used sparingly |
+| `--accent-1` | `#ffc7ad` | RED axis: **Relevance** |
+| `--accent-2` | `#f87854` | RED axis: **Extent** |
+| `--accent-3` | `#cf4422` | RED axis: **Duration** |
+| `--accent-tint` | `rgba(248, 120, 84, 0.12)` | A faint orange fill — used for `.docs-prose blockquote` backgrounds (paired with an `--accent`/blue left border there; that combination is existing markdown-prose styling, not a chrome/data violation worth copying elsewhere). |
+| `--chart-1` … `--chart-6` | `#ffd8c2 → #fbb088 → #f6814f → #e85d30 → #c2451f → #8f3417` | The six-step chart-series ramp, lightest to deepest. |
 
-> Heading colour: large headings use **`#fff`** (pure white) for maximum
-> contrast; everything else uses `--ink`. Body/secondary steps down through
-> `--ink-2 → --muted → --muted-2`.
+`--series-1..6` alias the chart ramp, but **the order reverses by theme** so
+the leading series colour stays legible against the ground:
 
-### 3.2 Accent ramp (orange family)
+- `:root` default (used by dark): `--series-1..6 = --chart-1..6` — lightest
+  leads, because a light line reads best against dark's near-black `--bg`.
+- Light theme override: `--series-1..6 = --chart-6..1` — darkest leads,
+  because a light line would nearly vanish against white.
 
-Used for scores, the RED stack, multi-segment bars, and gradients. Light→deep so
-three stacked segments stay distinguishable on near-black.
+**Never use `--accent` for a RED score or a chart series. Never use the
+orange ramp for a button, a nav item, a link, or a focus ring.** The RED
+triangle's one graded edge is the only thing orange marks; everywhere else,
+orange means "this is a measured value," and blue means "this is a control."
 
-| Token | Value | Role |
+---
+
+## 4. Semantic tones
+
+Six tones, defined once for all themes (`html, html[data-theme='light'],
+html[data-theme='dark']`):
+
+| Tone | Definition | Tint (chip/heat backgrounds) |
 |---|---|---|
-| `--accent-1` | `#ffc7ad` | Lightest — first stacked segment (e.g. Relevance), data-flow highlight |
-| `--accent-2` | `#f87854` | Mid / brand — second segment (Extent), default accent |
-| `--accent-3` | `#cf4422` | Deep — third segment (Duration) |
-| `--accent-ink` | `#1a0d08` | Near-black text placed **on** an orange fill (buttons, pills) |
-| `--accent-flow` | `#ffd9c8` | Marching-ants "data flow" stroke on the graded edge |
+| `--ok` | `var(--green)` → `#2f9e77` | `--ok-tint`: `color-mix(in srgb, var(--green) 14%, transparent)` |
+| `--warn` | `var(--amber)` → `#c9862b` | `--warn-tint`: `color-mix(in srgb, var(--amber) 14%, transparent)` |
+| `--crit` | `var(--red)` → `#d95e4a` | `--crit-tint`: `color-mix(in srgb, var(--red) 14%, transparent)` |
+| `--info` | `#2a7f8f` light / `#6fd0e0` dark | no dedicated tint token — themed per-block (§2.2/2.3) |
+| `neutral` | `var(--muted)` | (no dedicated tint — resolves through `--muted` directly) |
+| `accent` | `var(--accent)` | (chrome blue, §3 — a valid tone choice for an enum, not a colour anyone should hand-roll) |
 
-Glow recipe (ambient only): `rgba(248,120,84, α)` with `α` ∈ `{0.5, 0.6, 0.7}`.
+This is **Red's own vocabulary**, not carried over from PMO (which only has
+`--green`/`--amber`/`--red`). It exists because the definitions layer lets
+an admin tag *any* enum choice — initiative status, risk severity, whatever
+gets added next — with a tone in **Admin → Definitions**, and
+`TONE_COLOR` in `src/lib/definitions/choices.ts` resolves each of the six
+names straight to one of these CSS variables:
 
-### 3.3 White-alpha scale (borders, scrims, fills on dark)
-
-Use these instead of inventing new rgba values:
-
-```
-0.02  faint fill (terminal bar bg)
-0.04  subtle fill (ghost button rest)
-0.05  dot-grid, bar-track fill
-0.06  scrim / faint surface
-0.08  ghost button hover, chip-on-dark bg
-0.09  --line
-0.12  faint orange track (top progress bar bg uses orange 0.12)
-0.14  spine track
-0.18  --line-strong
-0.22  terminal dot (secondary)
-0.30  spine node rest border
-0.32  spine numeral rest
-0.40  spine reticle / dim label
-0.50  muted label rest
-0.55  data/done states
+```ts
+// src/lib/definitions/choices.ts
+export const TONE_COLOR: Record<Tone, string> = {
+  neutral: 'var(--muted)',
+  info: 'var(--info)',
+  ok: 'var(--ok)',
+  warn: 'var(--warn)',
+  crit: 'var(--crit)',
+  accent: 'var(--accent)',
+};
 ```
 
-### 3.4 Semantic status palette (app only)
+All six have to stay visually distinct from each other, which is exactly
+why `--info` is its own teal and not an alias of `--muted` — an admin
+choosing between "Info" and "Neutral" in the choices editor has to be able
+to tell them apart on the resulting chip, not just in the dropdown.
 
-The marketing page has no status states; the app does (initiative/risk/incident
-lifecycle). Keep these **desaturated** so orange remains the loudest colour.
-Status colour appears only as a 6px dot + text, never as a filled block.
+`Chips` and `FieldValue` resolve a value's colour from this metadata (either
+directly, or via the `ChoiceProvider` context built by `loadChoiceMeta`) —
+there is no hardcoded value→colour map anywhere in the app.
 
-| Token | Value | Use |
+---
+
+## 5. `--accent-ink`
+
+Text placed **on** an accent-coloured fill (`.btn-primary`, the segmented
+control's selected state, etc.) uses `--accent-ink`, defined as
+`var(--bg)` in both theme blocks — it flips with the theme instead of being
+a fixed colour:
+
+- Light: `--accent-ink` resolves to white, on the light theme's darker,
+  more saturated blue (`#2074ef`).
+- Dark: `--accent-ink` resolves to near-black (`#0a1524`), on the dark
+  theme's lighter, less saturated blue (`#6fb2ff`).
+
+The CSS comment on this token spells out why it can't be hardcoded: `#fff`
+on the dark theme's lighter accent reads at roughly 2.1:1 contrast and
+fails WCAG outright. Tying it to `--bg` gives white-on-blue in light and
+navy-on-light-blue in dark (~8.4:1) — a deliberate fix, not an oversight to
+copy from PMO, which does hardcode `#fff` there.
+
+---
+
+## 6. Typography
+
+### 6.1 Fonts
+
+Geist (sans) and Geist Mono, loaded by a CSS `@import` at the very top of
+`globals.css` — not `next/font`:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500&display=swap');
+```
+
+### 6.2 Weight & the body/heading rule
+
+- **Body:** `font-weight: 300`, `font-size: 15px`, `line-height: 1.6`
+  (the literal `body` rule in `globals.css`).
+- **Headings** (`h1`, `h2`, `h3`): `font-weight: 600`, `letter-spacing:
+  -0.02em`. `.view-title` (the page-header macro's `<h1>`, §11) restates
+  this explicitly plus its own `clamp(26px, 4.4vw, 42px)` size and `1.1`
+  line-height.
+
+### 6.3 The mono letter-spacing scale
+
+Every mono label in the system sits on one of these tracking values —
+tighter as the text gets less shouty, from a 10px eyebrow down to an
+11px inline caption:
+
+| Tracking | Example class | Used for |
 |---|---|---|
-| `--ok` | `#5fb88f` | done / resolved / closed (muted green) |
-| `--warn` | `#e0a35c` | blocked / monitoring / at-risk (muted amber) |
-| `--crit` | `#e8694e` | sev1 / open-incident / overdue (warm red, near accent) |
-| `--info` | `#7d93b0` | proposed / draft / neutral (cool grey-blue) |
-| `--ok-dim` / `--warn-dim` / `--crit-dim` / `--info-dim` | same hue @ `~0.14` alpha bg | optional chip background |
+| `0.26em` | `.eyebrow`, `.viztip .vk` | The loudest labels: page kickers, tooltip headers. |
+| `0.22em` | `.modal .mhead .zone-label` | Modal header zone labels. |
+| `0.2em` | `.btn`, `.tbmenu`, `.tbsect`, `.zone-label` | Buttons, topbar readouts, generic zone labels. |
+| `0.18em` | `.field .flabel`, `.sb .glabel`, `.brand span`, `.tabs button/a` | Form field labels, nav group headers, tabs. |
+| `0.16em` | `.pill`, `.mono-micro`, `.stat > span`, `.dtable th` | Status pills, table headers, stat captions. |
+| `0.14em` | `.tbid`/`.tbwho`, `.riskheat .rhaxis`, `.pmatrix th` | Identity readouts, matrix/axis labels. |
+| `0.1em` | `.viztip .vr > span`, `.evt .t` | Chart tooltip units, activity-feed timestamps. |
+| `0.08em` | `.q .qbig i` | Queue-row figure units. |
+| `0.06em` | `.tag-chip.mono` | Uppercase-mono tag chips. |
+| `0.04em` | `.micro`, `.viztip .vn` | The quietest mono caption text, not uppercased. |
 
-> Note: `--crit` sits intentionally close to the accent so "critical" reads as
-> hot without clashing. Never use a pure `#ff0000`.
+(`.stat > span` tightens further, to `0.12em`, only inside the
+`max-width: 480px` mobile override — a responsive squeeze on that one
+idiom, not a separate scale step.)
 
-### 3.5 Paste-ready token block
+### 6.4 Mono vs sans — the rule
 
-Drop into the app's theme stylesheet. Two ways to scope it (pick one):
-
-- **App-wide default (recommended for Red):** put it on `:root`.
-- **Theming alongside the existing light canvas:** put it on `[data-theme="dark"]`
-  (or a `.red-root` wrapper) and set `data-theme="dark"` on `<html>`.
-
-```css
-:root {
-  /* surfaces */
-  --bg: #080a0f;
-  --bg-alt: #0e131c;
-  --bg-elev: #11161f;
-  --bg-deep: #05070b;
-
-  /* text */
-  --ink: #eef2f8;
-  --ink-2: #c6d0dd;
-  --muted: #8b97a8;
-  --muted-2: #7a8595;
-  --white: #ffffff;
-
-  /* lines */
-  --line: rgba(255, 255, 255, 0.09);
-  --line-strong: rgba(255, 255, 255, 0.18);
-
-  /* accent (orange — the only accent) */
-  --accent: #f87854;
-  --accent-hover: #fa8d6f;
-  --orange: #f87854;
-  --accent-1: #ffc7ad;
-  --accent-2: #f87854;
-  --accent-3: #cf4422;
-  --accent-ink: #1a0d08;
-  --accent-flow: #ffd9c8;
-
-  /* canvas texture */
-  --grid-dot: rgba(255, 255, 255, 0.05);
-
-  /* semantic status (app) */
-  --ok: #5fb88f;
-  --warn: #e0a35c;
-  --crit: #e8694e;
-  --info: #7d93b0;
-
-  /* shape + rhythm */
-  --radius: 0;            /* never round surfaces */
-  --hairline: 1px;
-  --container: 1100px;    /* marketing; app shell may run wider — see §6.1 */
-}
-```
-
-### 3.6 Tailwind v4 mapping
-
-Mirror the website: expose tokens to Tailwind via `@theme` so utility classes
-(`bg-bg`, `text-ink`, `border-line`, `text-accent`, `font-mono`) resolve to the
-canvas palette, **and** keep the raw `:root` block above for component CSS.
-
-```css
-@import "tailwindcss";
-
-@theme {
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, Menlo, Monaco, monospace;
-
-  --color-bg: #080a0f;
-  --color-bg-alt: #0e131c;
-  --color-bg-elev: #11161f;
-  --color-ink: #eef2f8;
-  --color-muted: #8b97a8;
-  --color-line: rgba(255, 255, 255, 0.09);
-  --color-accent: #f87854;
-}
-
-/* Flatten radius + shadow globally so any stray utility still reads canvas */
-[class*="rounded-"]:not([class*="rounded-full"]) { border-radius: 0 !important; }
-[class*="shadow"]:not([class*="shadow-none"]) { box-shadow: none !important; }
-```
-
-### 3.7 Light-canvas lineage (reference only)
-
-Adaca Red descends from the Adaca One light canvas (white `#ffffff`, ink
-`#15293e`, blue accent `#2074ef`, orange `#F87854`). The ultra-dark theme is its
-**inversion with orange promoted from secondary to primary accent**. If you ever
-need a light surface (e.g. a printable report), invert: `--bg → #ffffff`,
-`--ink → #15293e`, `--line → #e5e8ee`, keep `--accent` as orange. Do not
-reintroduce blue as the accent in Red.
+If it's **machine-ish** — a label, a tag, a count, a status, a date, a key,
+a score, a code token, an ID — it's **Geist Mono, uppercase, positive
+letter-spacing** (one of the steps above). If it's **language** — a
+heading, a sentence, a name, a description — it's **Geist**, sentence
+case. This split is why the system reads as an instrument rather than a
+generic app; keep it strict when adding new UI.
 
 ---
 
-## 4. Typography
+## 7. Geometry
 
-### 4.1 Fonts
+### 7.1 Radius scale
 
-- **Geist** — sans, for headings and body.
-- **Geist Mono** — for all labels, tags, numerals, code, status, keys, axes.
+The old system's `--radius: 0` custom property, and the two blanket
+`!important` rules that flattened every `rounded-*`/`shadow-*` Tailwind
+utility site-wide, are **gone from this file and must not come back**.
+Radius is deliberately expressive under Canvas, and it steps through nine
+values, verified against real call sites:
 
-Load (already in the marketing `Layout`; replicate in the app `<head>`):
+| Radius | Used for | Example classes |
+|---|---|---|
+| `6px` | Tiny controls & small chips | `.brand span` (sidebar product tag), `.grip` (kanban drag handle) |
+| `8px` | Nav rows & compact menu rows | `.sb a.nv`/`a.sv`, `.tbswitch`, `.tbuser`, `.tbpanel a`/`.menu-row`, `.chev`, `.gtip` |
+| `10px` | The default control radius | `.field input`/`textarea`/`select` (+ `.field-input`), `.viztip`, `.rh` (risk-heat cell), `.docs-prose code`/`pre`, `.lexical-wrap`, `.tag-input` |
+| `12px` | Small panel/group surfaces | `.sb .grp`, `.tbpanel`, `.stats` strip, `.alert` |
+| `14px` | The standard card/surface radius | `.card`, `.badd`, `.empty`, `.gchart`, `.chart-card`, `.field select::picker(select)` |
+| `16px` | Dialogs | `.modal` |
+| `20px` | Pills | `.pill`, `.seg button`, `.tag-chip` |
+| `40px` | Full-pill buttons/toggles | `.btn`, `.tgl` |
+| `50%` | Circles | `.tbavatar`, `.own i`, `.avatar-s`, `.spin`/`.spinner`, `.rag` |
 
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+A handful of thin functional elements (progress-bar tracks/fills at
+2–4px, the `.check` box at 5px, the narrow-viewport `.riskheat` cell at
+9px) use ad-hoc radii sized to their own stroke width rather than this
+scale — they aren't a second system to reuse elsewhere. `.btn-text` is the
+one deliberate `border-radius: 0` in the file, because it's a link styled
+as a button, not a boxed control.
+
+### 7.2 The shadow idiom
+
+One recipe, reused for every floating/elevated surface:
+
+```
+box-shadow: 0 <offset>px <blur>px -<spread>px rgba(10, 21, 36, <alpha>);
 ```
 
-Base: `font-feature-settings: 'ss01' on, 'cv11' on; -webkit-font-smoothing: antialiased; line-height: 1.5; letter-spacing: -0.005em;`
+| Element | Value |
+|---|---|
+| `.tbpanel` | `0 24px 60px -24px rgba(10, 21, 36, 0.45)` |
+| `.card:hover` | `0 16px 40px -22px rgba(10, 21, 36, 0.5)` |
+| `.bghost .card` (dragged card) | `0 24px 56px -20px rgba(10, 21, 36, 0.55)` |
+| `.field select::picker(select)` | `0 24px 64px -28px rgba(10, 21, 36, 0.55)` |
+| `.viztip` | `0 18px 48px -20px rgba(10, 21, 36, 0.5)` |
+| `.sb.open` (mobile drawer) | `24px 0 80px -40px rgba(10, 21, 36, 0.6)` (horizontal, since it slides in from the left) |
 
-**Weights in use:** 400 (body, code), 500 (almost everything — headings, labels,
-buttons), 600 (only the oversized watermark). Never 700+ in product UI.
+The colour is always `rgba(10, 21, 36, …)` regardless of theme — even on
+the light theme, an elevated panel drops a *dark* shadow (a light shadow on
+white would simply vanish). Offset runs 16–24px, blur 40–80px, spread
+−20 to −40px (the negative spread keeps the shadow tight to the panel
+rather than bleeding past its edge). Reserve this for things that float
+above the canvas — dropped panels, open pickers, a card mid-drag, a
+tooltip — never for a resting card or an input.
 
-### 4.2 Type scale (role → spec)
-
-| Role | Family | Size | Weight | Line-height | Letter-spacing | Colour |
-|---|---|---|---|---|---|---|
-| Display / hero H1 | Geist | `clamp(48px, 8vw, 96px)` | 500 | 0.95 | -0.04em | `#fff` |
-| Section H2 (`.h2`) | Geist | `clamp(26px, 3.4vw, 38px)` | 500 | 1.12 | -0.02em | `#fff` |
-| Sub-headline | Geist | `clamp(18px, 2.4vw, 24px)` | 500 | 1.25 | -0.015em | `#fff` |
-| Lead paragraph (`.lead`) | Geist | 15–16px | 400 | 1.65 | normal | `--ink-2` |
-| Body | Geist | 14px | 400 | 1.6 | normal | `--muted` / `--ink` |
-| Body small | Geist | 13–13.5px | 400 | 1.6 | normal | `--muted` |
-| Card title | Geist | 16–19px | 500 | 1.2 | -0.01em | `#fff` |
-| **Eyebrow / kicker** | Geist Mono | 10–11px | 500 | 1 | 0.12–0.14em, UPPERCASE | `--accent` |
-| **Label / tag** | Geist Mono | 10px | 500 | 1 | 0.08–0.12em, UPPERCASE | `--muted-2` |
-| **Micro / coord** | Geist Mono | 9–9.5px | 500 | 1 | 0.06–0.08em, UPPERCASE | `--muted-2` |
-| **Big numeral** (score) | Geist Mono | `clamp(48px, 8vw, 72px)` | 500 | 0.9 | -0.03em, tabular | `#fff` |
-| Numeral / data | Geist Mono | 11–15px | 500 | 1 | tabular-nums | varies |
-| Code | Geist Mono | 12.5px | 400 | 1.95 | normal | `--ink` |
-
-Constants: `font-variant-numeric: tabular-nums;` on every numeral; max prose
-measure ~`56–72ch`; headings clamp to `~22ch`.
-
-### 4.3 Mono vs sans — the rule
-
-If it's **machine-ish** (a label, a tag, a count, a status, a date, a key, a
-score, a code token, an axis tick, a section number) → **Geist Mono, uppercase,
-positive letter-spacing.** If it's **language** (a heading, a sentence, a bio) →
-**Geist, sentence case, negative/normal letter-spacing.** This split is the
-backbone of the whole aesthetic — keep it strict.
+Box-shadow is also used for a *different*, non-elevation purpose — a
+"halo" ring, e.g. `.rag` (`0 0 0 3px color-mix(in srgb, <tone> 18%,
+transparent)`) and `.field select:open` (`0 0 0 4px color-mix(in srgb,
+var(--accent) 15%, transparent)`). Don't confuse the two: a halo has zero
+offset/blur and a positive spread; the lift idiom above always has a
+negative spread.
 
 ---
 
-## 5. Spacing & layout
+## 8. Idiom catalogue
 
-### 5.1 Container
+Every named class in `globals.css`, grouped. One line each — this is the
+part you'll actually reach for while building a screen.
 
-```css
-.container {
-  width: 100%;
-  max-width: var(--container);     /* 1100px marketing */
-  margin-inline: auto;
-  padding-inline: 1.25rem;          /* 20px */
-}
-@media (min-width: 640px)  { .container { padding-inline: 2rem; } }   /* 32px */
-@media (min-width: 1024px) { .container { padding-inline: 2.5rem; } } /* 40px */
-```
+### Shell
 
-For the **app shell** (sidebar + content) you may run wider than 1100px; keep the
-same gutters and hairline rhythm. Content columns inside still cap measure at
-~72ch for readability.
+| Class | What it is |
+|---|---|
+| `.wrap` | The page content column: `min(1100px, 100%)`, centred, with the page's vertical rhythm (`112px`/`176px` top/bottom, tightening at narrower breakpoints). Wrap every page's content in this. |
+| `.sb` | The fixed sidebar rail (`var(--sb-w)`, `264px`). Ink gradient in light mode, flattens to solid `--bg` in dark. Becomes an off-canvas drawer (`.sb.open`) under 900px. |
+| `.brand` / `.brand span` | The sidebar logo row / the small mono product-tag chip beside the wordmark. |
+| `.sb nav`, `.grp`, `.glabel` | The nav's grouped-section wrapper / a group card / its mono group heading. |
+| `.sb a.nv`, `a.nv.on` | A top-level nav row / its active state (white text + accent-tint fill — the one place active reads as white rather than accent, because it's already inside the rail's own tinted chrome). |
+| `.sect.chv`, `.chev` | A nav section with a sub-view disclosure / its chevron toggle button. |
+| `.sb .views`, `.views.x` | The collapsible sub-view list (animates via `grid-template-rows: 0fr → 1fr`). |
+| `.sb a.sv`, `a.sv.on` | A sub-view row / its active state (accent text + accent-tint fill). |
+| `.tgl` | The theme-toggle pill (lives in the topbar identity panel). |
+| `.tb` | The fixed topbar: 56px, blurred glass over the canvas. |
+| `.tbl`, `.tbdrop`, `.tbmenu` | Topbar left cluster / a dropdown's positioning wrapper / the mobile hamburger button. |
+| `.tbswitch`, `.tbswitch.static` | The section·view readout button, or a non-interactive label when there's nothing to switch to. |
+| `.tbsect` | The mono "current section" label inside `.tbswitch`. |
+| `.tbuser`, `.tbavatar`, `.tbid` | The identity trigger button / circular initials avatar / mono identity readout beside it. |
+| `.tbpanel`, `.tbpanel.right`, `a.on` | The dropped panel (identity menu, search results) / right-anchored variant / an active row inside one (declared but currently unused by any call site — see §10). |
+| `.tbwho`, `.tbsep` | A panel's "who's signed in" header row / a divider rule inside a panel. |
+| `.scrim` | The drawer's backdrop, mobile only. |
+| `main.page` | Content offset for the fixed sidebar + topbar (`margin-left: var(--sb-w); padding-top: 56px`). |
+| `.logo-light`, `.logo-dark` | The theme-aware wordmark swap — `.logo-light` is hidden by default and shown only under `[data-theme='light']`, which simultaneously hides `.logo-dark`. |
 
-### 5.2 Vertical rhythm
+### Type
 
-- **Section band:** `padding-block: clamp(48px, 6vw, 76px)`, `border-top: 1px solid var(--line)`.
-- **Hero:** `padding-top: clamp(64px, 10vw, 120px)`, `padding-bottom: clamp(56px, 8vw, 100px)`; `min-height: 80vh` at ≥940px.
-- **Section header → content gap:** 40px (`mb-10`).
-- **Card padding:** 28–30px (compact data cells 16–22px).
-- **Stack gaps:** 8px (tags), 12px (buttons), 18–22px (control rows), 36–56px (major columns).
+| Class | What it is |
+|---|---|
+| `.eyebrow`, `.eyebrow.neutral` | The mono kicker above a page title — accent by default, `.neutral` for a muted variant. |
+| `.view-title` | The page `<h1>` (§6.2, §11). |
+| `.lede` | The intro paragraph under a title — muted, capped at 54ch. |
+| `.mono-micro` | Small muted mono caption text. |
+| `.mono` | A bare `font-family: mono` utility, for an inline value that needs the face without a named idiom's full styling. |
+| `.docs-prose` | Full markdown typography for `RichTextView` — headings, lists, blockquote, code/pre, tables all get their own rhythm here; it's the one place prose gets real heading spacing rather than the app's tight UI type. |
 
-### 5.3 Grid systems
+### Buttons
 
-**A. Hairline-gap grid** (cells share crisp 1px separators) — use for feature
-grids, team grids, metric grids:
+| Class | What it is |
+|---|---|
+| `.btn` | The base pill button — mono, uppercase, `40px` radius, hairline border. |
+| `.btn-primary` | Filled-accent button, text in `--accent-ink`. One per view. |
+| `.btn-danger` | Outlined in `--red`; fills on hover. |
+| `.btn-ghost` | Filled-ghost secondary (`--ghost` background) — defined in Red to fix a gap where PMO's own markup uses `.btn-ghost` without ever defining it. |
+| `.btn.sm` / `.btn-sm` | The compact size — `.btn-sm` is a standalone alias so it works without also requiring `.btn`. |
+| `.btn-text` | A button styled as an inline text link — no border, no radius, no padding. |
 
-```css
-.grid-hair {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1px;                     /* the gap IS the hairline */
-  background: var(--line);      /* shows through the gaps */
-  border: 1px solid var(--line);
-}
-@media (min-width: 640px) { .grid-hair { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 920px) { .grid-hair { grid-template-columns: repeat(3, 1fr); } }
-.grid-hair > * { background: var(--bg-alt); }
-```
+### Pills & identity
 
-**B. Collapsed-border grid** (cells with their own borders, overlapped by -1px)
-— use for 3-up cards in a single row:
+| Class | What it is |
+|---|---|
+| `.pill`, `.pill.doing`/`.review`/`.crit`/`.ok` | The rounded status pill and its semantic colour variants. |
+| `.own`, `.own i` | An attribution row — name plus a tiny circular initials avatar. |
+| `.avatar-s` | A standalone small circular avatar (same geometry as `.own i`, usable outside `.own`). |
+| `.tag-chip`, `.tag-chip.mono` | A removable chip inside `.tag-input` — plain or uppercase-mono. |
 
-```css
-.card { border: 1px solid var(--line); background: var(--bg-alt); }
-@media (min-width: 760px) { .card:not(:first-child) { margin-left: -1px; } }
-@media (max-width: 759px) { .card:not(:first-child) { margin-top: -1px; } }
-```
+### Forms
 
-### 5.4 Breakpoints (the ones this design actually uses)
+| Class | What it is |
+|---|---|
+| `.field`, `.field .flabel` | A labelled field wrapper / its mono uppercase label. |
+| `.field input`/`textarea`/`select` | The shared control chrome: `10px` radius, `--card` fill, border eases to `--accent` on focus. |
+| `.ferr` | Inline field error text — red, mono. |
+| `.check` | A labelled checkbox row; the box itself is a custom 5px-radius square with an accent check mark, not the native control. |
+| `.field-input`, `.field-label` | Standalone aliases of `.field input` / `.field .flabel`, for markup outside a `.field` wrapper. |
+| `.tag-input`, `.tag-chip` | A multi-value input (enum choices, scale labels) with removable chips. |
+| `.statesel` | A status pill that *is* a real `<select>` — the control sits transparent and absolutely-positioned over the pill so it keeps the pill's shape while staying keyboard-reachable. |
+| `.lexical-wrap`, `.lexical-toolbar`, `.lexical-tool`, `.lexical-div`, `.lexical-editable`, `.lexical-placeholder` | The Lexical rich-text editor's chrome (`.card` surface + 10px radius): outer wrapper / toolbar row / a toolbar button / a toolbar divider / the editable body / its empty-state placeholder text. |
 
-`640` (2-col grids, container gutter) · `760` (3-col cards) · `860/880/920/940`
-(two-column splits, hero) · `900` (terminal split) · `1024` (container gutter) ·
-**`1200` (scroll-spine appears / top-bar hides)**.
+Selects get one more layer: under `@supports (appearance: base-select)`,
+`.field select` upgrades from a styled native trigger to a fully themed
+`::picker(select)` panel (rounded-14 card, the §7.2 shadow, options with
+hover/checked states). Browsers without that support keep the styled
+trigger and the OS's native picker — both paths are themed, neither is
+broken. The chevron itself (`--select-chevron`, §2.2/2.3) is baked as an
+SVG data-URI rather than a pseudo-element, because a classic `<select>`
+ignores `::before`/`::after` in every engine; only the `base-select` path
+can use a real pseudo-element (`::picker-icon`).
+
+### Tables
+
+| Class | What it is |
+|---|---|
+| `.tscroll` | Sideways-scroll wrapper for a table wider than its container — edge-fade gradients plus small arrow hints that self-hide once you've scrolled to that edge. |
+| `.dtable`, `.dtable.compact` | The standard data table (mono uppercase headers, hairline rows) / a denser-padding variant. |
+| `.pmatrix` | The permissions matrix — centred cells, muted `.locked` rows. |
+| `.docs-prose table` | Markdown tables inherit the `.dtable` grammar automatically. |
+
+### Overlays
+
+| Class | What it is |
+|---|---|
+| `.overlay`, `.modal`, `.modal.wide` | The fixed backdrop / the dialog panel / its wide (760px) variant. |
+| `.modal .mhead`, `.mbody`, `.mfoot` | Dialog header (carries a `.zone-label`) / body / footer action row. |
+| `.acc`, `.disclosure` | Native `<details>` wrappers — the config accordion, and the public report's collapsed sections. |
+| `.mark` | The registration-mark crosshair (`Modal`) — a small `::before`/`::after` cross drawn in `--accent`, positioned absolutely on a `position: relative` corner. |
+| `[data-sonner-toast]` | On-brand theming for the `sonner` toast library — rounded-12 body, `--fg`/`--muted` text, `--accent` success icon, `--red` error icon, a themed close button. |
+
+### Data display
+
+| Class | What it is |
+|---|---|
+| `.stats`, `.stat` | The KPI strip — an auto-fit grid of hairline-gap cells. |
+| `.mstones`, `.ms`, `.ms.sub` | Milestone/progress rows with an inline bar; `.sub` is the indented child variant. |
+| `.card`, `.card.dragging`, `.card.committed` | The ticket/entity card, its mid-drag state, and its "just landed" flash animation. |
+| `.board`, `.bcol`, `.bcol.dragover`, `.badd` | The kanban board / a lane / a lane being dragged over / a lane's add-card control. |
+| `.bslot`, `.grip`, `.bdrop`, `.bghost`, `.bmoving` | Drag machinery: card positioning wrapper / drag handle / drop-line indicator / the card riding the pointer / a body-level class while a drag is live. |
+| `.feed`, `.evt` | An activity thread and its timestamped entries. |
+| `.queue`, `.q` | Numbered "slip" rows — large index numeral, title, trailing metric. |
+| `.slates`, `.slate` | Big free-floating stat figures (not gridded/bordered like `.stats`). |
+| `.gauges`, `.gauge`, `.gfill.warn`/`.crit`/`.ok` | A labelled reading with a track+fill bar; the fill's semantic colour variants. |
+| `.dive`, `.dstop`, `.dstop.now` | A vertical timeline of stops, current stop in accent. |
+| `.riskheat`, `.rh` | The likelihood × impact grid, and one cell. |
+| `.rag`, `.rag.g`/`.a`/`.r`/`.off` | A small health dot with a matching halo — green/amber/red/off. |
+| `.pbar`, `i.warn`/`.crit` | A standalone slim progress bar. |
+| `.wsteps`, `.ws.on`/`.done` | A horizontal wizard-step tracker. |
+| `.seg`, `button.on` | A segmented filter/choice control — also styles RED's 0–4 rating buttons directly via `.seg button`; no separate `.seg-btn` rule exists. |
+| `.bfilters` | The kanban board's own filter-row layout — no control styling of its own, it routes selects through `.field`. |
+| `.empty` | A dashed-border empty-state panel. |
+| `.alert`, `.alert.warn`/`.error` | An inline banner. |
+| `.micro`, `.zone-label` | Small muted mono utility text. |
+| `.divider` | A bare 1px hairline rule. |
+| `.text-link`, `.muted-link` | Inline accent link / muted-hover-to-`--fg` link. |
+| `.menu-row`, `.menu-row--danger` | A dropdown menu row for markup outside `.tbpanel`'s own structure. |
+| `.tab-panel` | Top padding for a tab's content, plus a margin-collapse reset so a child's own top margin can't leak through. |
+| `.tstrip` | The sidebar's small "today's time" readout block. |
+| `.card .bsprint` | The sprint label on a kanban card — quiet muted mono, deliberately *not* accent, because it's context rather than state. |
+| `.toc-row`, `.toc-row__arrow` | A table-of-contents row (`Toc` component) whose trailing arrow turns accent on row hover. |
+| `.report-toc-link` | A public-report ToC link — turns accent on hover. |
+| `.react-grid-item.react-grid-placeholder`, `.react-draggable-dragging`, `.react-resizable-handle(-se)` | Theming for `react-grid-layout` on the dashboard: the drop-placeholder (accent-tinted, rounded-14), a raised z-index while dragging, and an accent-on-hover resize handle. |
+
+### Charts
+
+| Class | What it is |
+|---|---|
+| `.gchart`, `.gchart-scroll`, `.gbar`, `.ghandle`, `.gtip` | The draggable Gantt-style project chart, its scroll wrapper, a draggable bar / resize handle, and its hover tooltip. |
+| `.viztip` | The shared tooltip plate for every other chart (the `VizTip` component) — mono readout rows with a stroke swatch per series. |
+| `.chart-card`, `.chart-head` | The bordered card a recharts chart sits in, and its title row. |
+| `[data-tip]` hover rules | Lift/brighten the hovered mark across `.rh`, `.gauge .gfill`, `.pbar i`, and any other `[data-tip]` element. |
+| `.spin`, `.spinner` | The loading spinner — two class names sharing one `@keyframes adaca-spin`. |
+
+### Motion
+
+See §9 for the full behaviour; the classes themselves:
+
+| Class | What it is |
+|---|---|
+| `.canvas-motion` | The gate class stamped on `<html>` pre-paint, unless the visitor prefers reduced motion. Every animation rule in the file is scoped under it. |
+| `.rv`, `.rv.in` | The staggered reveal — `.in` is what `CanvasMotion` adds on intersect. |
+| `.rv-fast` | A faster variant (0.5s, 50ms stagger) for elements already on-screen at load. |
+| `[data-draw] .draw`, `.dashfade`, `.fill`, `text` | SVG stroke draw-on plus a delayed label fade, for diagrams. |
 
 ---
 
-## 6. Canvas grammar (the signature furniture)
+## 9. Motion
 
-These four elements + the dot-grid are what make any screen unmistakably "Red".
+Everything animated in the app is gated on `.canvas-motion`, which the
+root layout's head script adds to `<html>` before paint *unless* the
+visitor has `prefers-reduced-motion: reduce` — every `.rv`/`[data-draw]`
+rule in `globals.css` is written `.canvas-motion .rv { … }`, so without the
+gate class those elements simply render in their finished state.
 
-### 6.1 Dot-grid background
+**Reveals (`.rv`).** An element starts at `opacity: 0; transform:
+translateY(22px)`; `CanvasMotion.tsx` (a client component mounted once in
+the root layout) watches every `.rv`/`[data-draw]` on the page with an
+`IntersectionObserver` and adds `.in` the moment it scrolls into view,
+which transitions it to `opacity: 1; transform: none` over `0.8s`. Stagger
+comes from a CSS custom property set inline per element:
 
-```css
-.canvas-grid {
-  background-image: radial-gradient(circle, var(--grid-dot) 0.9px, transparent 1.3px);
-  background-size: 28px 28px;
-  background-position: -1px -1px;
-}
+```tsx
+<h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
 ```
-Apply to section surfaces. On near-black, `--grid-dot` is `rgba(255,255,255,0.05)`.
 
-### 6.2 Registration marks (corner crosshairs)
+`transition-delay: calc(var(--i, 0) * 80ms)` — so `--i: 0, 1, 2…` gives a
+clean 80ms cascade. `.rv-fast` (50ms stagger, 0.5s duration) is applied
+automatically, in JS, to anything already inside the viewport at mount —
+those don't wait for the observer, they fire on the next two animation
+frames instead.
 
-A 13px orange crosshair pinned to a surface corner. Place on the **top-left of the
-first** item and **bottom-right of the last** item in a group, or on featured
-panels (both corners).
+**Count-ins (`[data-count]`).** Not CSS — `CanvasMotion.tsx` reads
+`data-count`/`data-suffix` off any element carrying that attribute and
+animates its `textContent` from `0` to the target over 900ms with a cubic
+ease-out, once, the first time it intersects.
 
-```css
-.mark { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
-.mark::before, .mark::after { content: ''; position: absolute; background: var(--orange); }
-.mark::before { width: 13px; height: 1px; top: 0; left: -6px; }   /* horizontal */
-.mark::after  { width: 1px; height: 13px; top: -6px; left: 0; }   /* vertical   */
-```
-Usage: `<span class="mark" style="top:0; left:0"></span>` inside a
-`position: relative` surface. The parent must be relative.
+**The theme transition.** `html`/`body` set `transition: background 0.9s
+var(--ease)` (`body` adds `color`), and essentially every themed idiom in
+the catalogue repeats `transition: … 0.9s var(--ease)` on its own
+background/border/colour properties. That's deliberate: flipping the
+`ThemeToggle` should read as the whole screen cross-fading together, not
+each panel snapping to its new colours at a different moment.
 
-### 6.3 Section header (zone tag · rule · revision stamp)
+**Reduced motion.** A single `@media (prefers-reduced-motion: reduce)`
+block turns off the `html`/`body` transition and `scroll-behavior`, forces
+`.rv`/`.rv-fast` straight to their `.in` state with `!important`, and kills
+all `animation`s outright. `CanvasMotion.tsx` also short-circuits on
+`document.hidden` (a backgrounded tab freezes CSS animation clocks, and a
+reveal that never finishes intersecting would leave the page permanently
+half-visible) and finishes every reveal/count-in immediately in that case
+too.
 
-The "file header" that opens every section: `§NN  TITLE ───────── REV ...`.
+### The `.rv` trap
 
-```html
-<div class="section-header">
-  <span class="zone-tag"><span class="num">§02</span>THE RUBRIC</span>
-  <div class="section-header-rule"></div>
-  <span class="rev-tag">REV 2026.06 · 02.00</span>
+**Never put `.rv` on an element whose `className` React recomputes.**
+
+`CanvasMotion` adds `.in` by calling `el.classList.add('in')` directly on
+the live DOM node, and then calls `io.unobserve(el)` — each element only
+ever gets this treatment once. React has no idea that mutation happened,
+because it manages `className` as a prop, not by reading the DOM. If that
+element's `className` is later recomputed by React — a conditional class
+string built from state, e.g. `className={active ? 'rv on' : 'rv'}` — React
+overwrites `element.className` wholesale on the next render and silently
+drops the `.in` the browser already added. Nothing re-triggers the
+observer (it already unobserved), so the element is now permanently stuck
+at `opacity: 0` with no way back.
+
+Reveal a **static** wrapper instead, and let the dynamic classes live on a
+child:
+
+```tsx
+// Wrong — className recomputes on `active`, and eventually drops `.in` forever
+<div className={active ? 'rv card on' : 'rv card'} style={{ '--i': i }}>
+
+// Right — .rv sits on a wrapper whose className never changes after mount
+<div className="rv" style={{ '--i': i }}>
+  <div className={active ? 'card on' : 'card'}>…</div>
 </div>
 ```
-```css
-.section-header { display: flex; align-items: center; gap: 16px; width: 100%; }
-.section-header-rule { flex: 1; height: 1px; background: var(--line); }
-.section-header .zone-tag, .section-header .rev-tag {
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted-2); white-space: nowrap;
-}
-.section-header .zone-tag .num { color: var(--accent); margin-right: 6px; }
-.section-header .rev-tag { color: var(--orange); }
-```
-**Conventions:**
-- `§NN` is a stable zone number per section/screen. In the app, give each major
-  screen a zone (e.g. `§ INITIATIVES`, `§ RISKS`, `§ RED`). Keep them consistent.
-- `REV YYYY.MM · NN.MM` is a decorative "revision" stamp. In the app it can be
-  real: surface the record's `current_rev` / last-updated here (it fits the
-  revisions model perfectly — see `CLAUDE.md`).
-- The numeral/zone uses accent; the rule and tags are muted; the rev stamp is
-  orange.
-
-### 6.4 Axis line
-
-A plain 1px rule used to divide blocks where a full section header is too much:
-`.axis { height: 1px; background: var(--line); width: 100%; }`
 
 ---
 
-## 7. Iconography & imagery
+## 10. House rules
 
-- **Line icons** only, `stroke-width: 1.5`, currentColor, ~16–20px. No filled
-  glyphs, no emoji. (The app already uses `@heroicons/react` — use the **outline**
-  set at 1.5.)
-- **Photography** (e.g. team headshots): duotone-ish treatment —
-  `filter: grayscale(1) contrast(1.03) brightness(0.92)`, transitioning to full
-  colour + `scale(1.03)` on hover. Portrait `aspect-ratio: 4 / 5`,
-  `object-position: center 22%` to favour faces. Placeholder bg `--bg-elev`.
-- **Logos/tech marks**: render in `--muted` / `--ink`, not full colour, unless a
-  brand requires it.
-
----
-
-## 8. Components
-
-Each component: anatomy → tokens → states → code. All have `border-radius: 0`.
-
-### 8.1 Buttons
-
-Base is mono, uppercase, letter-spaced, 1px border, square.
-
-```css
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 10px 16px; border-radius: 0;
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase;
-  border: 1px solid transparent; cursor: pointer; white-space: nowrap;
-  transition: background .12s ease, border-color .12s ease, color .12s ease, box-shadow .25s ease;
-}
-.btn svg { width: 14px; height: 14px; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-sm { padding: 7px 12px; font-size: 11px; }
-.btn-lg { padding: 12px 20px; font-size: 12.5px; }
-
-/* Primary — orange, the single strong CTA per view */
-.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
-
-/* Ghost — quiet secondary on dark */
-.btn-ghost { background: rgba(255,255,255,0.04); color: var(--ink); border-color: var(--line-strong); }
-.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.08); border-color: var(--ink); }
-
-/* Optional ambient glow on the hero/primary CTA */
-.glow-btn { box-shadow: 0 0 0 0 rgba(248,120,84,0.5); }
-.glow-btn:hover { box-shadow: 0 8px 30px -8px rgba(248,120,84,0.7); }
-```
-Rules: **one** `.btn-primary` per view/section. Destructive actions:
-`color: var(--crit); border-color: var(--crit)`, fill on hover.
-
-### 8.2 Chips / tags
-
-Inline mono metadata. Two flavours: plain (border) and key-value.
-
-```css
-.chip {
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted); border: 1px solid var(--line); padding: 5px 9px;
-  transition: border-color .2s ease, color .2s ease;
-}
-.chip:hover { border-color: var(--line-strong); color: var(--ink); }
-```
-
-### 8.3 Surface card
-
-The base panel for everything boxed.
-
-```css
-.surface {
-  position: relative; border: 1px solid var(--line); background: var(--bg-alt);
-  padding: 30px; transition: border-color .25s ease, background .25s ease;
-}
-.surface:hover {                          /* interactive cards only */
-  border-color: color-mix(in srgb, var(--orange) 50%, transparent);
-  background: var(--bg-elev);
-  z-index: 1;                              /* so the brightened border sits above neighbours */
-}
-```
-Featured/important surfaces get the radial accent wash:
-`background: radial-gradient(120% 140% at 100% 0%, rgba(248,120,84,0.08) 0%, transparent 55%), var(--bg-alt);`
-
-### 8.4 Feature grid cell
-
-Inside `.grid-hair`. Mono index in accent + sans title + muted desc.
-
-```css
-.feat { background: var(--bg-alt); padding: 28px; display: flex; flex-direction: column; gap: 9px; }
-.feat:hover { background: var(--bg-elev); }
-.feat-idx   { font-family: "Geist Mono"; font-size: 11px; font-weight: 500; letter-spacing: .08em; color: var(--orange); }
-.feat-title { font-size: 16px; font-weight: 500; color: #fff; }
-.feat-desc  { font-size: 13px; line-height: 1.6; color: var(--muted); }
-```
-
-### 8.5 Big-number readout (stat / score)
-
-For dashboards and the RED score. Oversized mono numeral + unit + band tag.
-
-```css
-.readout { display: flex; align-items: baseline; gap: 10px; }
-.readout-num  { font-family: "Geist Mono"; font-size: clamp(48px,8vw,72px); font-weight: 500;
-                line-height: .9; letter-spacing: -.03em; color: #fff; font-variant-numeric: tabular-nums; }
-.readout-unit { font-family: "Geist Mono"; font-size: 18px; color: var(--muted-2); }
-.readout-band { margin-left: auto; font-family: "Geist Mono"; font-size: 12px; font-weight: 500;
-                letter-spacing: .1em; text-transform: uppercase; color: var(--orange);
-                border: 1px solid color-mix(in srgb, var(--orange) 40%, transparent); padding: 6px 10px; }
-```
-
-### 8.6 Terminal / code block
-
-Recessed surface with a bar (one orange dot + two white-alpha) and a mono body.
-
-```css
-.term { border: 1px solid var(--line); background: var(--bg-deep); overflow: hidden; }
-.term-bar { display: flex; align-items: center; gap: 7px; padding: 11px 15px;
-            border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.02); }
-.term-dot { width: 9px; height: 9px; border-radius: 50%; }
-.term-dot.d1 { background: var(--orange); }
-.term-dot.d2 { background: rgba(255,255,255,0.22); }
-.term-dot.d3 { background: rgba(255,255,255,0.12); }
-.term-label { margin-left: auto; font-family: "Geist Mono"; font-size: 10.5px;
-              letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
-.term-body { margin: 0; padding: 22px; font-family: "Geist Mono"; font-size: 12.5px;
-             line-height: 1.95; color: var(--ink); overflow-x: auto; white-space: pre; }
-.term-body .c   { color: var(--muted-2); }   /* comment */
-.term-body .p   { color: var(--orange); }     /* prompt $ */
-.term-body .cmd { color: var(--ink); }        /* command  */
-```
-
-### 8.7 Status pill (app)
-
-Semantic lifecycle states. **6px dot + mono text**, optional faint bg. Keep
-desaturated so orange stays loudest.
-
-```css
-.status { display: inline-flex; align-items: center; gap: 6px;
-          font-family: "Geist Mono"; font-size: 11px; font-weight: 500;
-          letter-spacing: .04em; padding: 4px 9px; white-space: nowrap; }
-.status .dot { width: 6px; height: 6px; border-radius: 50%; }
-.status.ok   { color: var(--ok); }   .status.ok   .dot { background: var(--ok); }
-.status.warn { color: var(--warn); } .status.warn .dot { background: var(--warn); }
-.status.crit { color: var(--crit); } .status.crit .dot { background: var(--crit); }
-.status.info { color: var(--info); } .status.info .dot { background: var(--info); }
-```
-Domain mapping (from the seed definitions):
-- **Initiative**: proposed→`info`, active→`ok`(or accent), blocked→`warn`, done→`ok`, cancelled→`muted`.
-- **Risk**: open→`crit`, mitigating→`warn`, accepted→`info`, closed→`ok`.
-- **Incident severity**: sev1→`crit`, sev2→`warn`, sev3→`info`, sev4→`muted`.
-
-### 8.8 Disclosure (FAQ / accordion)
-
-Native `<details>`, hairline rows, orange +/− marker.
-
-```css
-.faq { border-top: 1px solid var(--line); }
-.faq details { border-bottom: 1px solid var(--line); }
-.faq summary { cursor: pointer; list-style: none; display: flex; align-items: center;
-               justify-content: space-between; gap: 20px; padding: 22px 0;
-               font-size: clamp(15px,2vw,18px); font-weight: 500; color: var(--ink); }
-.faq summary::-webkit-details-marker { display: none; }
-.faq summary::after { content: '+'; font-family: "Geist Mono"; font-size: 22px; color: var(--orange); line-height: 1; }
-.faq details[open] summary::after { content: '–'; }
-.faq summary:hover { color: #fff; }
-.faq-a { margin: -4px 0 22px; font-size: 14px; line-height: 1.7; color: var(--muted); max-width: 72ch; }
-```
-
-### 8.9 Person / team card
-
-```css
-.person { background: var(--bg-alt); display: flex; flex-direction: column; }
-.person-photo-wrap { overflow: hidden; aspect-ratio: 4/5; background: var(--bg-elev); }
-.person-photo { width: 100%; height: 100%; object-fit: cover; object-position: center 22%;
-                filter: grayscale(1) contrast(1.03) brightness(.92);
-                transition: filter .5s ease, transform .6s cubic-bezier(.2,.6,.1,1); }
-.person:hover .person-photo { filter: none; transform: scale(1.03); }
-.person-role { font-family: "Geist Mono"; font-size: 10px; font-weight: 500; letter-spacing: .12em;
-               text-transform: uppercase; color: var(--orange); }
-.person-name { font-size: 17px; font-weight: 500; color: #fff; }
-.person-line { font-size: 13px; line-height: 1.55; color: var(--muted); }
-```
-
-### 8.10 Data row (register / list / roadmap)
-
-The horizontal hairline row — the workhorse for registers and lists.
-
-```css
-.row {
-  display: grid; grid-template-columns: 260px 1fr auto; gap: 16px;
-  align-items: center; padding: 18px 0; border-bottom: 1px solid var(--line);
-  transition: padding-left .2s ease;
-}
-.row:first-child { border-top: 1px solid var(--line); }
-.row:hover { padding-left: 8px; }                      /* subtle nudge on hover */
-.row-key  { font-family: "Geist Mono"; font-size: 12px; font-weight: 500;
-            letter-spacing: .06em; text-transform: uppercase; color: #fff; }
-.row-note { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
-/* trailing slot: a .status pill or a mono tag */
-@media (max-width: 760px) {
-  .row { grid-template-columns: 1fr auto; grid-template-areas: 'key tag' 'note note'; }
-}
-```
-Roadmap status tags (a variant of the trailing slot):
-```css
-.tag-shipped  { background: var(--orange); color: var(--accent-ink); }
-.tag-progress { color: var(--orange); border: 1px solid color-mix(in srgb, var(--orange) 45%, transparent); }
-.tag-planned  { color: var(--muted-2); border: 1px solid var(--line-strong); }
-/* all: mono, 10px, .1em, uppercase, padding 5px 9px */
-```
-
-### 8.11 Form fields (app)
-
-Underline inputs (no boxes), transparent bg, mono labels.
-
-```css
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field-label { font-family: "Geist Mono"; font-size: 10px; font-weight: 500;
-               letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-.field-label .req { color: var(--accent); margin-left: 2px; }
-.field-input {
-  width: 100%; font-family: inherit; font-size: 14px; color: var(--ink);
-  background: transparent; border: none; border-bottom: 1px solid var(--line-strong);
-  border-radius: 0; padding: 10px 0; transition: border-color .15s ease;
-}
-.field-input::placeholder { color: var(--muted-2); }
-.field-input:hover:not(:disabled) { border-bottom-color: var(--ink); }
-.field-input:focus { outline: none; border-bottom-color: var(--accent); }
-.field-input[aria-invalid="true"] { border-bottom-color: var(--crit); }
-/* dark <select> needs a light arrow + dark option bg */
-select.field-input option { background: var(--bg-alt); color: var(--ink); }
-.field-error { font-size: 12.5px; color: var(--crit); }
-.field-hint  { font-size: 12px; color: var(--muted); }
-```
-For richtext/markdown fields, render the editor chrome in the same hairline/mono
-language; body text in Geist.
-
-### 8.12 Data table (app)
-
-Registers may use a true table. Header on `--bg-alt`, hairline rows, hover lift.
-
-```css
-.data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
-.data-table thead th {
-  text-align: left; padding: 12px 16px; font-family: "Geist Mono";
-  font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--muted); background: var(--bg-alt); border-bottom: 1px solid var(--line); white-space: nowrap;
-}
-.data-table tbody td { padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--ink); vertical-align: middle; }
-.data-table tbody tr:hover td { background: var(--bg-alt); }
-.data-table tbody tr:last-child td { border-bottom: 0; }
-```
+- **Active state reads as accent text, or a tint fill — never a dot, never
+  a left bar.** This is the dominant pattern, verified across the live
+  call sites: `.sb a.sv.on` (accent text + tint fill), `.tabs
+  button.active`/`a.active` (accent text + underline), `.seg button.on`
+  (accent text + tint border), `.wsteps .ws.on span` (accent text),
+  `.pill.doing`/`.review`/`.crit`/`.ok` (accent/semantic text only). RAG
+  dots (`.rag`), avatars and chart marks are **data** — a health signal, an
+  identity, a series colour — not a "you are here" affordance, and they
+  stay.
+  One declared exception worth knowing about: `.tbpanel a.on::before`
+  still draws a 3px accent left bar for an active dropdown-panel row. As
+  of this doc, **no call site in the app renders
+  `.tbpanel`/`.tbrow` with `.on`** — it's dormant, not exercised. If a
+  future screen wires up an active row inside a `.tbpanel`, know the bar
+  is there; either use it deliberately or drop the rule, don't be
+  surprised by it.
+- **Colour always goes inline via `var(--token)`; layout goes via
+  Tailwind — but prefer a named class from §8 over hand-rolling either.**
+  If the idiom you need already exists (a card, a pill, a form field), use
+  it; only fall through to raw Tailwind + `var(--token)` for genuinely
+  one-off layout.
+- **`globals.css` rules are unlayered, and therefore outrank Tailwind
+  utilities — deliberately.** Tailwind v4's utilities live inside CSS
+  cascade layers (`@import 'tailwindcss'` registers them); every selector
+  written directly in `globals.css` is not in any layer. Per the cascade
+  layers spec, unlayered rules beat layered ones regardless of
+  specificity or source order. This is exploited on purpose in at least
+  one place — the comment on `.bfilters` explains that a hypothetical
+  `.bfilters select` rule would silently outrank the `.field select`
+  styling the `Select` primitive relies on, which is exactly why that
+  block deliberately contains no such rule. Know this before reaching for
+  a Tailwind utility to override something a named class already styles —
+  it won't win.
+- **`:focus-visible` is global and visible.** `:focus-visible { outline:
+  2px solid var(--accent); outline-offset: 2px; }` is set once on `html`
+  and repeated per-idiom where a component needs its own offset (nav rows,
+  chevrons, form controls, etc., all `outline-offset: -2px` or similar to
+  sit inside their own border rather than outside it). Don't remove focus
+  rings; if a control needs a different offset, add it explicitly rather
+  than suppressing the outline.
 
 ---
 
-## 9. The RED visualisation (signature data component)
+## 11. Page composition
 
-RED (Relevance · Extent · Duration, each 0–4) is the brand's core data object.
-The landing page ships an **interactive scorer**; the app needs the same visual
-language for `RedScore`, `RedEditor` and `RedTrend`.
+The authenticated shell nests three fixed regions and one scrolling
+column:
 
-### 9.1 Colour mapping (deterministic — never random)
-
-| Dimension | Token | Hex |
-|---|---|---|
-| Relevance (R) | `--accent-1` | `#ffc7ad` |
-| Extent (E) | `--accent-2` | `#f87854` |
-| Duration (D) | `--accent-3` | `#cf4422` |
-
-Light→deep so a **stacked** 0–12 bar stays legible. These are fixed; do not hash
-or randomise. (This is the explicit fix for the origin model's random-colour bug.)
-
-### 9.2 Composite stacked bar (0–12) — the "main" view
-
-Three segments R/E/D side-by-side; each width = `value / 12 * 100%`; remaining
-track empty. Big mono total + band tag.
-
-```css
-.bar-track { display: flex; width: 100%; height: 16px; background: rgba(255,255,255,0.05);
-             border: 1px solid var(--line); overflow: hidden; }
-.bar-fill  { height: 100%; transition: width .45s cubic-bezier(.2,.6,.1,1); }
-.f-r { background: var(--accent-1); }
-.f-e { background: var(--accent-2); }
-.f-d { background: var(--accent-3); }
-.bar-scale { display: flex; justify-content: space-between; margin-top: 8px;
-             font-family: "Geist Mono"; font-size: 10px; color: var(--muted-2); }
+```
+.sb (fixed rail, var(--sb-w))   .tb (fixed topbar, 56px)
+                                 └─ main.page (margin-left: var(--sb-w); padding-top: 56px)
+                                     └─ .wrap (centred content column)
 ```
 
-### 9.3 Per-dimension grouped (0–4) — the "details" view
+Every page's own content then opens with the same header macro: an
+`.eyebrow`, a `.view-title` with an optional right-aligned primary action,
+and a `.lede`. Real example (`EntityListPage.tsx`, trimmed):
 
-In trend/detail views, show R, E, D as **grouped** bars each on a 0–4 scale (one
-group per assessment date). Y domain `[0,4]`, ticks 0–4. Reuse `--accent-1/2/3`.
-This mirrors `red.md` §4 (main = stacked 0–12; details = grouped 0–4).
+```tsx
+<div>
+  <p className="eyebrow rv">Register</p>
+  <div className="flex items-end justify-between gap-6 flex-wrap">
+    <h1 className="view-title rv flex items-center gap-3" style={{ '--i': 1 } as CSSProperties}>
+      {title}
+    </h1>
+    <span className="rv flex items-center gap-3" style={{ '--i': 2 } as CSSProperties}>
+      <Link href={`${basePath}/new`} className="btn btn-primary sm">
+        New {def.label}
+      </Link>
+    </span>
+  </div>
+  <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+    {count} {word} on record. Filter by any tracked field, or open one for the full detail.
+  </p>
 
-### 9.4 Band labels (composite 0–12)
-
-`≤3 Weak · ≤6 Limited · ≤9 Moderate · else Strong`. (Per-dimension 0–4 bands map
-1→Weak, 2→Limited, 3→Moderate, 4→Strong.) Render the band as a `.readout-band`.
-
-### 9.5 Segmented 0–4 control (the editor input)
-
-Five square buttons; selected = orange fill with near-black text + glow.
-
-```css
-.seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.seg-btn { font-family: "Geist Mono"; font-size: 13px; font-weight: 500; color: var(--muted);
-           background: transparent; border: 1px solid var(--line-strong); padding: 12px 0;
-           cursor: pointer; transition: all .18s ease; }
-.seg-btn:hover { border-color: var(--orange); color: var(--ink); }
-.seg-btn.on { background: var(--orange); border-color: var(--orange);
-              color: var(--accent-ink); box-shadow: 0 0 18px -4px rgba(248,120,84,0.7); }
+  <div className="mt-10">{/* page body */}</div>
+</div>
 ```
 
-### 9.6 Behaviour reference (from the landing page)
-
-```js
-const state = { relevance: 3, extent: 2, duration: 2 };   // each 0–4
-const total = state.relevance + state.extent + state.duration;  // 0–12
-const band  = total <= 3 ? 'Weak' : total <= 6 ? 'Limited' : total <= 9 ? 'Moderate' : 'Strong';
-// fill widths: (value / 12) * 100% ; transitions handle the animation
-```
-In the app, RED edits are **revisions** (one row per re-score) — the trend is the
-edge's revision history, not a new table. `assessmentDate` is a first-class field.
+The title row is a `flex justify-between` so the one primary action sits
+right-aligned against the title, not the lede. `--i` staggers the reveal
+(§9): eyebrow implicitly first, title `1`, action and lede both `2` (they
+appear together).
 
 ---
 
-## 10. Motion system
+## 12. What was deliberately not ported
 
-Motion is orchestrated, not scattered: one staggered page-load, scroll-reveals as
-sections enter, hover micro-interactions, and (where it explains something) a
-data-driven animation. Everything degrades under `prefers-reduced-motion`.
+`globals.css` carries a "PORT NOTES" comment block (near the end of the
+file, just before the RED-specific idioms) recording exactly what didn't
+make the crossing from PMO's Canvas system, and why:
 
-### 10.1 Easing & duration tokens
+**Skipped outright — zero Red call sites:**
 
-| Token | Value | Use |
-|---|---|---|
-| ease-out-soft | `cubic-bezier(0.2, 0.6, 0.1, 1)` | reveals, rises, bar fills (default) |
-| ease-draw | `cubic-bezier(0.4, 0, 0.2, 1)` | SVG stroke draw-on |
-| t-fast | 0.12s | button/colour transitions |
-| t-micro | 0.18–0.25s | hovers, label reveals |
-| t-color | 0.30s | state colour changes |
-| t-bar | 0.45s | score bar width |
-| t-reveal | 0.60–0.70s | section reveal / load rise |
-| t-draw | 0.85s | edge draw |
-| ambient | 3–11s | bloom, pulses (infinite) |
-
-### 10.2 Page-load stagger
-
-Elements rise + fade, staggered by `animation-delay` (hero used 0.05 → 0.50s).
-
-```css
-[data-rise] { opacity: 0; animation: rise .7s cubic-bezier(.2,.6,.1,1) forwards; }
-@keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-```
-
-### 10.3 Scroll reveal (IntersectionObserver)
-
-```css
-[data-reveal] { opacity: 0; transform: translateY(20px);
-  transition: opacity .7s cubic-bezier(.2,.6,.1,1), transform .7s cubic-bezier(.2,.6,.1,1); }
-[data-reveal].in { opacity: 1; transform: none; }
-```
-```js
-const io = new IntersectionObserver((es) => {
-  es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-}, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
-```
-(React/vinext: wrap as a `useReveal()` hook or a `<Reveal>` client component.)
-
-### 10.4 Hover micro-interactions (catalogue)
-
-- **Card:** border → `color-mix(orange 45–55%)`, bg → `--bg-elev`, raise `z-index`.
-- **Data row:** `padding-left: 8px` nudge.
-- **Chip / tech tag:** border → `--line-strong`/orange, text → `--ink`.
-- **Photo:** grayscale → colour, `scale(1.03)`.
-- **Seg button:** border → orange; selected has glow.
-- **Primary CTA:** ambient orange shadow blooms.
-Keep each ≤ 0.25s. Never move layout (except the deliberate row nudge).
-
-### 10.5 Data-driven SVG (the relationship graph)
-
-For diagrams (e.g. the initiative→risk→incident triangle, or `/graph`):
-- **Nodes** fade + translateY in, staggered ~0.12s apart.
-- **Edges** draw via `stroke-dasharray/offset` (`ddraw .85s ease-draw`), graded
-  edge first.
-- **The graded (RED) edge** carries a marching-ants overlay = "data flowing":
-  `stroke: var(--accent-flow); stroke-dasharray: 2 9; animation: march .9s linear infinite;`
-  (`@keyframes march { to { stroke-dashoffset: -22; } }`), plus a soft
-  `drop-shadow(0 0 5px rgba(248,120,84,.5))` and a slow opacity pulse on its label.
-- Plain edges: `stroke: var(--line-strong)`, no flow. **Only the graded edge gets
-  the orange + flow** — visually encoding "this is the one scored relationship."
-
-### 10.6 Ambient atmosphere
-
-- **Bloom:** a large blurred orange radial behind hero/closer headings.
-  `background: radial-gradient(circle at 50% 40%, rgba(248,120,84,.30) 0%, rgba(248,120,84,.10) 34%, transparent 66%); filter: blur(36px);` animated `bloom 11s ease-in-out infinite` (opacity 0.75↔1, slight translate+scale). Use **sparingly** — hero and one closer, not every section.
-- **Grain:** an inline SVG `feTurbulence` overlay at low opacity for depth.
-  `baseFrequency 0.85, numOctaves 2`, rect `opacity 0.04`, layer `opacity 0.5`, `pointer-events: none`.
-- **Watermark:** oversized mono word (e.g. "RED") behind hero content, transparent
-  fill + `-webkit-text-stroke: 1px rgba(255,255,255,0.045)`, desktop only,
-  `user-select: none; pointer-events: none`.
-
-### 10.7 Reduced motion (required)
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  [data-rise], [data-reveal] { opacity: 1 !important; transform: none !important;
-    animation: none !important; transition: none !important; }
-  .bloom, .pulse, .march, .reticle { animation: none !important; }
-  .draw { animation: none !important; stroke-dashoffset: 0 !important; }
-  .flow { display: none !important; }
-}
-```
-Everything must be fully visible and usable with motion off.
-
----
-
-## 11. The scroll companion (section spine)
-
-A fixed left-gutter spine that travels with the scroll and **unlocks** sections
-as you reach them; on narrow viewports it degrades to a slim top progress bar.
-This is the one place colours are **hard-coded** (it lives outside the themed
-wrapper so it can't inherit tokens, and so a page's `overflow-x: clip` can never
-clip a fixed element). In the app, mount it once in the authed shell.
-
-### 11.1 Anatomy
-
-- `.rail` — `position: fixed; left: clamp(20px,3vw,44px); top: 50%; translateY(-50%); z-index: 40;` shown only `@media (min-width: 1200px)`.
-- `.rail-track` — full-height 1px line `rgba(255,255,255,0.14)`.
-- `.rail-fill` — orange line that grows top→down with scroll progress, `box-shadow: 0 0 8px rgba(248,120,84,.6)`, `transition: height .12s linear`.
-- `.rail-item` per section: a 9px **node** + mono **numeral** + mono **label**.
-- `.rail-bar` — `position: fixed; top: 0; height: 2px;` orange `.rail-bar-fill` (width = progress). Shown only `< 1200px` (hide the spine there).
-
-### 11.2 Node states ("locked → unlocked → active")
-
-- **Locked (upcoming):** node hollow, border `rgba(255,255,255,0.3)`, numeral `rgba(255,255,255,0.32)`.
-- **Done (passed):** node fills `rgba(248,120,84,0.55)`, numeral `rgba(248,120,84,0.7)`.
-- **Active (current):** node fills solid `--accent` with `box-shadow: 0 0 0 1px var(--accent), 0 0 12px rgba(248,120,84,0.7)`; numeral → accent; label → `#fff`; a **registration-mark reticle** (`inset:-5px; border:1px solid rgba(248,120,84,0.4)`) pings (`scale 1↔1.18, 2.4s`).
-- **Labels** are hidden at rest (`opacity:0; translateX(-4px)`), revealed on
-  `.rail:hover` and always shown for the active item. At rest the spine is just
-  numerals — minimal, true to the canvas.
-- **Click** a node → smooth-scroll to that section (`html { scroll-behavior: smooth }`
-  + `section { scroll-margin-top: 84px }` to clear the sticky header).
-
-### 11.3 Controller logic (reference)
-
-```js
-const ref = window.scrollY + window.innerHeight * 0.35;     // the "unlock" line
-let active = -1;
-targets.forEach((t, i) => { if (t.getBoundingClientRect().top + scrollY <= ref) active = i; });
-const prog = scrollY / (document.documentElement.scrollHeight - innerHeight);  // 0..1
-railFill.style.height = prog * 100 + '%';
-items.forEach((it, i) => { it.classList.toggle('active', i === active); it.classList.toggle('done', i < active); });
-// throttle with requestAnimationFrame; recompute on scroll + resize
-```
-**App adaptation:** the spine can map to either the in-page sections of a long
-record (an incident report's sections) **or** the primary nav of the shell. Keep
-the same visual states. Don't show it on short, dense screens (registers/tables)
-— it's for long, scrollable documents.
-
----
-
-## 12. Accessibility
-
-- **Focus:** the canvas flattening removes default rings, so the app **must add**
-  a visible focus style (the marketing page is mostly links; the app is forms,
-  tables, editors):
-  ```css
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 0; }
-  ```
-- **Contrast:** `--ink (#eef2f8)` on `--bg (#080a0f)` ≈ 16:1. `--muted (#8b97a8)`
-  on `--bg` ≈ 6:1 (use for secondary text ≥13px, not tiny critical text). Don't
-  drop body text below `--muted`. Orange `#f87854` on near-black ≈ 6:1 — fine for
-  large text/UI; for small text on orange fills use `--accent-ink` (`#1a0d08`).
-- **Decorative elements** (`.mark`, grid, bloom, grain, spine track, diagram
-  flourishes) are `aria-hidden="true"`.
-- **Meaningful SVGs** get `role="img"` + `aria-label`.
-- **Don't encode meaning in colour alone:** status pills pair a dot **and** text;
-  RED segments are labelled R/E/D; the active spine item also enlarges/labels.
-- **Keyboard:** segmented controls are real `<button>`s; disclosures use native
-  `<details>`; spine items are `<a href="#id">`. Tables get proper `<th scope>`.
-- **Reduced motion** honoured everywhere (§10.7).
-- **Tap targets** ≥ 40px in the app (the marketing seg-buttons are ~44px tall).
-
----
-
-## 13. Implementing in the Red app (vinext / Next + Tailwind v4)
-
-The app already has `src/app/globals.css` (light canvas tokens) and a
-`src/components/canvas/` library. To adopt this system:
-
-1. **Tokens.** Replace/extend the `:root` palette in `globals.css` with §3.5.
-   Decide: dark-first (`:root` = dark, recommended for Red) or themed
-   (`[data-theme="dark"]` + set on `<html>`). Mirror into `@theme` (§3.6).
-2. **Base.** Set `body { background: var(--bg); color: var(--ink); }`, load Geist
-   + Geist Mono (§4.1), add the global radius/shadow flatteners and
-   `:focus-visible` (§12).
-3. **Canvas furniture.** Add `.canvas-grid`, `.mark`, `.section-header`, `.axis`
-   (§6) as global classes (they're already the convention).
-4. **Map existing canvas components** to these tokens (they should mostly already
-   read `var(--token)`): `SectionHeader`, `KeyFacts`, `HeadlineMetrics`,
-   `StatBand`, `SplitCard`, `CompareTable`, `ProfilePanel`, `ZoneAxis`, etc.
-   Verify each on near-black; fix any hard-coded light values.
-5. **Build app components** from §8/§9: `Register`/`EntityTable` (§8.12 + 8.10),
-   `EntityForm` fields (§8.11), `StatusChip` (§8.7), `RedScore`/`RedEditor`
-   (§9.2/9.5), `RedTrend` (§9.3, stacked + grouped), `RiskMatrix` (hairline grid,
-   §5.3A, cells tinted by `--crit`/`--warn`/`--info` density), `RevisionHistory`
-   (data rows §8.10 + REV stamp §6.3).
-6. **Motion.** Implement `useReveal()` (§10.3), the load-stagger, and the spine
-   (§11) once in the authed layout. Charts: deterministic colours only (§9.1),
-   draw-on for relationship graphs (§10.5).
-7. **Density.** App screens are denser than the marketing page — keep paddings at
-   the lower end (16–22px), hairlines everywhere, and let orange mark only the
-   active row / primary action / score. Resist decorating data tables.
-
-### 13.1 Quick component → spec map
-
-| App component (from implementation-plan.md) | Spec section |
+| Idiom | What it was |
 |---|---|
-| AppShell / sidebar+topnav | §6.3 header, §3 tokens, §11 spine |
-| Register / EntityTable | §8.12, §8.10, §8.7 |
-| EntityForm / field renderers | §8.11, §12 focus |
-| FilterBar | §8.2 chips, §8.11 inputs |
-| RedEditor | §9.5 segmented control, §9.4 bands |
-| RedScore | §8.5 readout, §9.2 bar |
-| RedTrend | §9.2 (stacked 0–12), §9.3 (grouped 0–4) |
-| RiskMatrix | §5.3A hairline grid, §3.4 status hues |
-| StatusChip / SeverityChip | §8.7 |
-| RevisionHistory | §8.10 rows, §6.3 REV stamp |
-| Tree (containment) | §8.10 rows, indent + hairlines |
-| Dashboard | §8.5 readouts, §8.4 feature grid, §8.10 rows |
-| Relationship graph (/graph) | §10.5 SVG, §9.1 colours |
+| `.fleet` / `.fl` | Portfolio water-bars |
+| `.cmx` | Compliance matrix |
+| `.roster` / `.r*` | Resourcing views |
+| `.lgroup` / `.lrow` | Ledger rows |
+| `.gate` | Gate plaque |
+| `.rail` | Client-portal view-stop nav |
+| `.evid` | Sign-off evidence |
 
----
+Re-port any of these from `/Users/lambros/Apps/adaca/pmo/src/app/globals.css`
+if a future Red screen needs the idiom — they were never translated onto
+Red's token/radius scale, so treat PMO's version as a starting point, not
+a drop-in.
 
-## 14. Cheat-sheet
-
-```
-BG        #080a0f      INK    #eef2f8     ACCENT   #f87854
-BG-ALT    #0e131c      INK-2  #c6d0dd     ACC-HOV  #fa8d6f
-BG-ELEV   #11161f      MUTED  #8b97a8     ACC-1/2/3 #ffc7ad / #f87854 / #cf4422
-BG-DEEP   #05070b      MUTED2 #7a8595     ACC-INK  #1a0d08
-LINE      rgba(255,255,255,.09)          GRID-DOT rgba(255,255,255,.05)
-LINE-STR  rgba(255,255,255,.18)          WHITE    #ffffff (headings only)
-
-FONT      Geist (prose) · Geist Mono (labels/numerals/code)
-WEIGHTS   400 body · 500 everything · 600 watermark only
-RADIUS    0   ·   SHADOW none (glow ok)   ·   ACCENT one only (orange)
-EASE      cubic-bezier(.2,.6,.1,1)        GRID 28px dot · MARK 13px crosshair
-SECTION   §NN tag · rule · REV stamp      SPINE ≥1200px, top-bar below
-RED       R #ffc7ad · E #f87854 · D #cf4422  (0–4 each, 0–12 stacked)
-BANDS     ≤3 Weak · ≤6 Limited · ≤9 Moderate · else Strong
-```
-
----
-
-*Source of truth: `adaca-website/src/pages/red/index.astro`. Keep this doc and
-that page in lockstep — when one changes, update the other.*
+**Deleted outright — zero Red call sites, verified by grep:** `.btn-dark`,
+`.btn-lg`, `.axis`, `.section-header`(`-rule`), `.zone-tag`, `.rev-tag`,
+`.nav-link` (+ `.nav-link-bar`), `.nav-section-link`, `.coord`,
+`.index-card`, `.split-prose`(`--note`), `.report-tile`(`__arrow`),
+`.disclosure-caret`, `.canvas-grid`. The nav-prefixed ones went when the
+sidebar was rebuilt on `.sb`/`.nv` (§8, Shell); the rest went with the 14
+unused `canvas/*` components they belonged to. **Do not reintroduce
+`.canvas-grid`** (the old dot-grid texture) or the `§NN` section-header/
+rev-stamp furniture (`.section-header`, `.zone-tag`, `.rev-tag`) — none of
+it survived the port, and nothing in the current app expects it.

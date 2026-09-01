@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { listNodes, listEdgesByType } from '@/lib/nodes/queries';
 import { readRed, coverageFromReds, type Red } from '@/lib/red';
@@ -30,13 +31,19 @@ export default async function Page() {
   const unmitigated = rows.filter((r) => r.count === 0);
 
   return (
-    <div className="">
-      <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.02em' }}>RED coverage</h1>
-      <p className="mt-2 mb-6 text-[14px]" style={{ color: 'var(--muted)' }}>
-        {unmitigated.length} of {rows.length} risks have no mitigating initiative.
+    <div>
+      <p className="eyebrow rv">Reports</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        RED coverage
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        {unmitigated.length} of {rows.length} risks have no mitigating initiative; the rest are sorted
+        weakest-covered first.
       </p>
 
-      <CoverageTable rows={rows} />
+      <div className="mt-10 rv" style={{ '--i': 3 } as CSSProperties}>
+        <CoverageTable rows={rows} />
+      </div>
     </div>
   );
 }

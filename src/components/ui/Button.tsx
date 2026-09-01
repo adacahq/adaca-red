@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import { ButtonHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'dark' | 'ghost' | 'danger';
+type Variant = 'primary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -9,6 +9,15 @@ import { UserSelect, UsersSelect } from './UserPicker';
 
 export type FieldValueT = string | number | boolean | string[] | null | undefined;
 
+/**
+ * True when the control renders its own label, so a caller must NOT also
+ * render one above it. Only booleans do: `.check` places the text after the
+ * box, and a second label above would duplicate it.
+ */
+export function rendersOwnLabel(field: FieldDef): boolean {
+  return field.data_type === 'boolean';
+}
+
 export default function FieldInput({
   field,
   value,
@@ -40,14 +49,23 @@ export default function FieldInput({
       );
 
     case 'boolean':
+      // `.check` is a box PLUS its text — with no text child it renders as an
+      // orphaned square floating under a label it isn't visibly attached to.
+      // So a boolean owns its label and puts it after the box, as PMO does;
+      // callers skip the label above via rendersOwnLabel().
       return (
-        <input
-          id={id}
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
-          style={{ width: 16, height: 16 }}
-        />
+        <label className="check">
+          <input
+            id={id}
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(e) => onChange(e.target.checked)}
+          />
+          <span>
+            {field.label}
+            {field.required ? ' *' : ''}
+          </span>
+        </label>
       );
 
     case 'number': {

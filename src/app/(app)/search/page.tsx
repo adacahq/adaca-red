@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { searchNodes } from '@/lib/nodes/queries';
+import { formatDate } from '@/lib/format';
 import Chip from '@/components/entity/Chips';
 import EmptyState from '@/components/ui/EmptyState';
 
@@ -30,53 +31,63 @@ export default async function Page({
   const total = groups.reduce((n, g) => n + g.rows.length, 0);
 
   return (
-    <div className="">
-      <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.02em' }}>Search</h1>
-      <form action="/search" className="mt-4 mb-8 flex gap-2">
+    <div>
+      <p className="eyebrow rv">Search</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        Search
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        Find any initiative, risk or incident by title.
+      </p>
+
+      <form action="/search" className="mt-8 flex gap-3">
         <input
           type="search"
           name="q"
           defaultValue={query}
           placeholder="Search titles…"
           className="field-input"
-          style={{ maxWidth: 360 }}
+          style={{ maxWidth: 420 }}
           autoFocus
         />
-        <button type="submit" className="btn btn-primary btn-sm">Search</button>
+        <button type="submit" className="btn btn-primary sm">Search</button>
       </form>
 
       {query && (
-        <p className="mb-4 text-[13px]" style={{ color: 'var(--muted)' }}>
+        <p className="mt-6 mono" style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
           {total} result{total === 1 ? '' : 's'} for &ldquo;{query}&rdquo;
         </p>
       )}
 
       {query && total === 0 && (
-        <EmptyState
-          icon={MagnifyingGlassIcon}
-          eyebrow="Search"
-          title="No matches found"
-          description={`Nothing matched “${query}”. Try a different term, or check spelling.`}
-        />
+        <div className="mt-8">
+          <EmptyState
+            eyebrow="Search"
+            title="No matches found"
+            description={`Nothing matched “${query}”. Try a different term, or check spelling.`}
+          />
+        </div>
       )}
 
       {groups.map((g) =>
         g.rows.length === 0 ? null : (
-          <section key={g.key} className="mb-6">
+          <section key={g.key} className="mt-10">
             <p className="field-label">{g.label}</p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, borderTop: '1px solid var(--line)' }}>
-              {g.rows.map((row) => {
+            <div className="queue" style={{ marginTop: 6 }}>
+              {g.rows.map((row, i) => {
                 const d = (row.data ?? {}) as { title?: string; status?: string };
                 return (
-                  <li key={row.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: '1px solid var(--line)' }}>
-                    <Link href={`${g.base}/${row.id}`} className="text-link" style={{ flex: 1 }}>
+                  <Link key={row.id} href={`${g.base}/${row.id}`} className="q">
+                    <span className="qi">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="qt">
                       {d.title ?? 'Untitled'}
-                    </Link>
-                    {d.status && <Chip value={d.status} />}
-                  </li>
+                      <small>Updated {formatDate(row.updated_at)}</small>
+                    </span>
+                    <span className="qm">{d.status && <Chip value={d.status} />}</span>
+                  </Link>
                 );
               })}
-            </ul>
+            </div>
           </section>
         ),
       )}
