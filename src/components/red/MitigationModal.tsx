@@ -107,7 +107,7 @@ export default function MitigationModal({
       <div className="flex items-baseline justify-between mb-3">
         <span className="field-label" style={{ margin: 0 }}>RED score</span>
         <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-          {total}/12 · <span style={{ color: 'var(--accent)' }}>{band(total)}</span>
+          {total}/12 · <span style={{ color: 'var(--accent-2)' }}>{band(total)}</span>
         </span>
       </div>
 
@@ -115,8 +115,8 @@ export default function MitigationModal({
         {AXES.map((a) => (
           <div key={a.key} className="flex items-center justify-between gap-4">
             <span>
-              <span style={{ fontSize: 13, color: 'var(--ink)' }}>{a.label}</span>
-              <span className="block text-[11px]" style={{ color: 'var(--muted-2)' }}>{a.hint}</span>
+              <span style={{ fontSize: 13, color: 'var(--fg)' }}>{a.label}</span>
+              <span className="block text-[11px]" style={{ color: 'var(--muted)' }}>{a.hint}</span>
             </span>
             <div className="seg shrink-0" role="radiogroup" aria-label={a.label}>
               {SCORES.map((s) => (
@@ -135,7 +135,7 @@ export default function MitigationModal({
           </div>
         ))}
         <div className="flex items-center justify-between gap-4">
-          <span style={{ fontSize: 13, color: 'var(--ink)' }}>Assessed</span>
+          <span style={{ fontSize: 13, color: 'var(--fg)' }}>Assessed</span>
           <DatePicker value={date} onChange={setDate} />
         </div>
       </div>

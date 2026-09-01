@@ -9,74 +9,32 @@ import {
   clearRecents,
 } from '@/lib/recents';
 import { routeFor } from '@/lib/nodes/routes';
-import { iconFor } from '@/lib/views/icons';
 
-export default function SidebarRecents({
-  typeIcons,
-  onNavigate,
-}: {
-  typeIcons: Record<string, string>;
-  onNavigate?: () => void;
-}) {
+/**
+ * The rail's "recently visited" strip — the `.tstrip` grammar (a `.glabel`
+ * caption, plain text rows, a mono accent "Clear"). Text-only, like the rest
+ * of the rail. The localStorage-backed store is unchanged by this restyle.
+ */
+export default function SidebarRecents() {
   const recents = useSyncExternalStore(subscribeRecents, getRecentsSnapshot, getRecentsServerSnapshot);
+  if (recents.length === 0) return null;
 
   return (
-    <div className="mt-5">
-      <div className="flex items-center gap-2 px-4 pb-1.5 pt-1">
-        <span
-          className="mono"
-          style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--muted-2)' }}
-        >
-          Recents
-        </span>
-        <span aria-hidden style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-        {recents.length > 0 && (
-          <button
-            type="button"
-            onClick={() => clearRecents()}
-            className="mono nav-section-link"
-            style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-2)' }}
-            title="Clear recents"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-
-      {recents.length === 0 ? (
-        <p className="px-4 py-1" style={{ fontSize: 11.5, color: 'var(--muted-2)' }}>
-          Nothing visited yet.
+    <div className="tstrip">
+      <span className="glabel">Recents</span>
+      {recents.map((r) => (
+        <p key={`${r.type}:${r.id}`} className="truncate">
+          <Link href={`${routeFor(r.type)}/${r.id}`}>{r.title}</Link>
         </p>
-      ) : (
-        <ul role="list" className="flex flex-col gap-0.5">
-          {recents.map((r) => {
-            const Icon = iconFor(typeIcons[r.type]);
-            return (
-              <li key={`${r.type}:${r.id}`}>
-                <Link
-                  href={`${routeFor(r.type)}/${r.id}`}
-                  onClick={onNavigate}
-                  className="nav-link group flex items-center gap-x-2.5 py-[7px]"
-                  style={{ paddingLeft: 18, paddingRight: 10, color: 'var(--muted)' }}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--muted-2)' }} aria-hidden />
-                  <span
-                    style={{
-                      fontSize: 12.5,
-                      flex: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {r.title}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      ))}
+      <button
+        type="button"
+        onClick={() => clearRecents()}
+        className="mono-micro"
+        style={{ color: 'var(--accent)', marginTop: 10 }}
+      >
+        Clear
+      </button>
     </div>
   );
 }

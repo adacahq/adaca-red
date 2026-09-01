@@ -1,4 +1,4 @@
-import { ArrowDownRightIcon } from '@heroicons/react/20/solid';
+import type { MouseEvent } from 'react';
 
 export interface TocItem {
   /** Sequential number. Auto-padded to "01", "02", … in the left column. */
@@ -9,33 +9,35 @@ export interface TocItem {
   text: string;
   /** Optional secondary tag (mono uppercase) shown between number and text. */
   tag?: string;
+  /** Optional 7px tone dot shown between the number/tag and text — a status
+   *  colour for the row (e.g. a rating's tone). Omit for a plain row. */
+  tone?: string;
 }
 
 interface TocProps {
   /** Eyebrow label above the list. Item count is appended automatically. */
   title: string;
   items: TocItem[];
+  /** Section wrapper className; default suits a standalone page section.
+   *  Pass something tighter (e.g. "mb-6") when nesting inside an already-
+   *  padded container, such as a tab panel. */
+  className?: string;
+  /** Called before default anchor navigation on an item click — call
+   *  event.preventDefault() to take over (e.g. a custom smooth-scroll).
+   *  Absent = plain anchor behaviour. */
+  onItemClick?: (item: TocItem, event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
 /**
  * The single in-page table of contents. Mono number left, optional tag,
- * text, hover arrow right. Hairline rows. Prescriptive: same visual
- * register on every page. Use it whenever a section has more than three
- * jump targets.
+ * optional tone dot, text, hover arrow right. Hairline rows. Prescriptive:
+ * same visual register on every page. Use it whenever a section has more
+ * than three jump targets.
  */
-export default function Toc({ title, items }: TocProps) {
+export default function Toc({ title, items, className = 'my-10', onItemClick }: TocProps) {
   return (
-    <section className="my-10">
-      <p
-        className="mono mb-3"
-        style={{
-          fontSize: 10,
-          fontWeight: 500,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--muted-2)',
-        }}
-      >
+    <section className={className}>
+      <p className="zone-label mb-3">
         {title} · {items.length}
       </p>
       <ul
@@ -53,13 +55,14 @@ export default function Toc({ title, items }: TocProps) {
               <a
                 href={it.href}
                 className="toc-row group flex items-baseline gap-4 py-3"
+                onClick={onItemClick ? (e) => onItemClick(it, e) : undefined}
               >
                 <span
                   className="mono"
                   style={{
-                    fontSize: 10,
+                    fontSize: 14,
                     letterSpacing: '0.08em',
-                    color: 'var(--muted-2)',
+                    color: 'var(--muted)',
                     minWidth: 24,
                   }}
                 >
@@ -69,21 +72,27 @@ export default function Toc({ title, items }: TocProps) {
                   <span
                     className="mono hidden sm:inline"
                     style={{
-                      fontSize: 9,
+                      fontSize: 14,
                       fontWeight: 500,
                       letterSpacing: '0.14em',
                       textTransform: 'uppercase',
-                      color: 'var(--muted-2)',
+                      color: 'var(--muted)',
                       minWidth: 160,
                     }}
                   >
                     {it.tag}
                   </span>
                 )}
+                {it.tone && (
+                  <span
+                    aria-hidden
+                    style={{ width: 7, height: 7, borderRadius: '50%', background: it.tone, display: 'inline-block', flexShrink: 0, alignSelf: 'center' }}
+                  />
+                )}
                 <span
                   style={{
-                    color: 'var(--ink)',
-                    fontSize: 14,
+                    color: 'var(--fg)',
+                    fontSize: 15,
                     lineHeight: 1.45,
                     letterSpacing: '-0.005em',
                     flex: 1,
@@ -91,11 +100,13 @@ export default function Toc({ title, items }: TocProps) {
                 >
                   {it.text}
                 </span>
-                <ArrowDownRightIcon
+                <span
                   aria-hidden
-                  className="toc-row__arrow h-3 w-3 shrink-0"
-                  style={{ color: 'var(--muted-2)', transition: 'color 0.15s ease' }}
-                />
+                  className="toc-row__arrow shrink-0"
+                  style={{ fontSize: 13, color: 'var(--muted)', transition: 'color 0.15s ease' }}
+                >
+                  ↘
+                </span>
               </a>
             </li>
           );

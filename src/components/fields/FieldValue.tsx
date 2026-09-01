@@ -5,7 +5,7 @@ import Chip from '@/components/entity/Chips';
 import RichTextView from '@/components/rich-text/RichTextView';
 import { UserName, UserNames } from './UsersContext';
 
-const EMPTY = <span style={{ color: 'var(--muted-2)' }}>–</span>;
+const EMPTY = <span style={{ color: 'var(--muted)' }}>–</span>;
 
 /** Read-only render of a single field's value, per data_type. */
 export default function FieldValue({

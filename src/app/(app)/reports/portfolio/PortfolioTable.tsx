@@ -41,7 +41,7 @@ export default function PortfolioTable({ rows }: { rows: PortfolioRow[] }) {
       key: 'avg',
       header: 'Avg RED',
       mono: true,
-      cellStyle: { color: 'var(--ink)' },
+      cellStyle: { color: 'var(--fg)' },
       cell: (r) => `${r.avg}/12`,
       sortValue: (r) => r.avg,
     },

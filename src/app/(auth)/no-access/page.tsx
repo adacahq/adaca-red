@@ -21,7 +21,7 @@ export default async function NoAccessPage() {
             fontWeight: 500,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: 'var(--amber-ink)',
+            color: 'var(--warn)',
           }}
         >
           Access pending
@@ -34,13 +34,13 @@ export default async function NoAccessPage() {
           {user?.email ? (
             <>
               {' '}
-              as <strong style={{ color: 'var(--ink)' }}>{user.email}</strong>
+              as <strong style={{ color: 'var(--fg)' }}>{user.email}</strong>
             </>
           ) : null}
           , but an administrator needs to grant you a role before you can use the
           app. Please check back shortly.
         </p>
-        <p className="mt-3 text-[13px]" style={{ color: 'var(--muted-2)', lineHeight: 1.6 }}>
+        <p className="mt-3 text-[13px]" style={{ color: 'var(--muted)', lineHeight: 1.6 }}>
           Need help? Contact{' '}
           <a href="mailto:support@adaca.com" className="text-link">support@adaca.com</a>.
         </p>

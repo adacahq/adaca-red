@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { PencilSquareIcon } from '@heroicons/react/20/solid';
 import NodeEditModal from './NodeEditModal';
 import type { FieldDef, NodeRow } from '@/lib/supabase/types';
 
@@ -20,8 +19,8 @@ export default function EditNodeButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
-        <PencilSquareIcon className="h-4 w-4" aria-hidden /> Edit
+      <button type="button" className="btn btn-ghost sm" onClick={() => setOpen(true)}>
+        Edit
       </button>
       {open && (
         <NodeEditModal

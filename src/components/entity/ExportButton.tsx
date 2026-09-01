@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, Bars2Icon } from '@heroicons/react/20/solid';
 import type { FieldDef } from '@/lib/supabase/types';
 import { fetchExportRows, type ExportRow } from '@/lib/nodes/export';
 import { formatDate } from '@/lib/format';
@@ -31,6 +30,15 @@ interface FilterState {
 type Filters = Record<string, FilterState>;
 
 type FilterKind = 'text' | 'enum' | 'numEnum' | 'number' | 'bool' | 'date';
+
+/** Drag-handle glyph (was heroicons' Bars2Icon): two bars, drawn inline. */
+function DragHandle() {
+  return (
+    <svg width="14" height="8" viewBox="0 0 14 8" fill="none" aria-hidden>
+      <path d="M1 1.5h12M1 6.5h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 // ── pure helpers (module scope) ──────────────────────────────
 function buildCols(fields: FieldDef[]): Col[] {
@@ -211,7 +219,7 @@ function FilterControl({
     return (
       <div className="flex items-center gap-2">
         <input className="field-input" type="number" style={{ ...small, width: 90 }} placeholder="Min" value={value?.min ?? ''} onChange={(e) => onChange({ min: e.target.value })} />
-        <span style={{ color: 'var(--muted-2)' }}>–</span>
+        <span style={{ color: 'var(--muted)' }}>–</span>
         <input className="field-input" type="number" style={{ ...small, width: 90 }} placeholder="Max" value={value?.max ?? ''} onChange={(e) => onChange({ max: e.target.value })} />
       </div>
     );
@@ -220,7 +228,7 @@ function FilterControl({
     return (
       <div className="flex items-center gap-2">
         <DatePicker value={value?.from ?? ''} onChange={(v) => onChange({ from: v })} ariaLabel={`${col.label} from`} />
-        <span style={{ color: 'var(--muted-2)' }}>–</span>
+        <span style={{ color: 'var(--muted)' }}>–</span>
         <DatePicker value={value?.to ?? ''} onChange={(v) => onChange({ to: v })} ariaLabel={`${col.label} to`} />
       </div>
     );
@@ -319,8 +327,8 @@ export default function ExportButton({
 
   return (
     <>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={openModal}>
-        <ArrowDownTrayIcon className="h-4 w-4" aria-hidden /> Export
+      <button type="button" className="btn btn-ghost sm" onClick={openModal}>
+        ↓ Export
       </button>
 
       <Modal
@@ -330,7 +338,7 @@ export default function ExportButton({
         maxWidth={640}
         footer={
           <div className="flex flex-wrap items-center gap-3">
-            <span className="mono" style={{ fontSize: 11, color: 'var(--muted-2)' }}>
+            <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
               {selectedCols.length} column{selectedCols.length === 1 ? '' : 's'} · {filtered.length} row{filtered.length === 1 ? '' : 's'}
             </span>
             <span style={{ flex: 1 }} />
@@ -361,7 +369,7 @@ export default function ExportButton({
         </p>
 
         {loading ? (
-          <p className="mt-6 text-[13px]" style={{ color: 'var(--muted-2)' }}>Loading data…</p>
+          <p className="mt-6 text-[13px]" style={{ color: 'var(--muted)' }}>Loading data…</p>
         ) : (
           <div className="mt-4" style={{ maxHeight: '52vh', overflowY: 'auto', borderTop: '1px solid var(--line)' }}>
             {cols.map((col) => (
@@ -381,7 +389,7 @@ export default function ExportButton({
                   borderBottom: '1px solid var(--line)',
                   borderTop: overKey === col.key && dragKey !== col.key ? '2px solid var(--accent)' : '2px solid transparent',
                   padding: '9px 2px',
-                  background: dragKey === col.key ? 'var(--bg-elev)' : 'transparent',
+                  background: dragKey === col.key ? 'var(--card)' : 'transparent',
                   opacity: dragKey === col.key ? 0.5 : 1,
                 }}
               >
@@ -396,9 +404,9 @@ export default function ExportButton({
                     title="Drag to reorder"
                     aria-label={`Reorder ${col.label}`}
                     className="shrink-0"
-                    style={{ cursor: 'grab', color: 'var(--muted-2)', display: 'inline-flex', padding: '2px' }}
+                    style={{ cursor: 'grab', color: 'var(--muted)', display: 'inline-flex', padding: '2px' }}
                   >
-                    <Bars2Icon className="h-4 w-4" aria-hidden />
+                    <DragHandle />
                   </span>
                   <input
                     type="checkbox"
@@ -407,12 +415,12 @@ export default function ExportButton({
                     aria-label={`Include ${col.label}`}
                     style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
                   />
-                  <span style={{ flex: 1, fontSize: 13.5, color: col.selected ? 'var(--ink)' : 'var(--muted)' }}>
+                  <span style={{ flex: 1, fontSize: 13.5, color: col.selected ? 'var(--fg)' : 'var(--muted)' }}>
                     {col.label}
                   </span>
                   <span
                     className="mono"
-                    style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-2)' }}
+                    style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}
                   >
                     {col.dataType}
                   </span>

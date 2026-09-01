@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Bars2Icon, XMarkIcon, PlusIcon } from '@heroicons/react/20/solid';
 import Select from './Select';
 import { childTypesOf, addableViews, VIEW_BY_KIND } from '@/lib/views/registry';
 import { deriveStructural } from '@/lib/views/tabs';
@@ -113,7 +112,7 @@ export default function TabsEditor({
     <div style={{ borderTop: '1px solid var(--line)' }}>
       <div
         className="mono"
-        style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', columnGap: 12, padding: '6px 0', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-2)', borderBottom: '1px solid var(--line)' }}
+        style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', columnGap: 12, padding: '6px 0', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '1px solid var(--line)' }}
       >
         <span />
         <span>Tab</span>
@@ -153,9 +152,11 @@ export default function TabsEditor({
                   setOverIdx(null);
                 }}
                 title="Drag to reorder"
-                style={{ cursor: 'grab', color: 'var(--muted-2)' }}
+                style={{ cursor: 'grab', color: 'var(--muted)' }}
               >
-                <Bars2Icon className="h-4 w-4" aria-hidden />
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+                  <path d="M1 1h10M1 7h10" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
               </span>
               <input
                 className="field-input"
@@ -163,7 +164,7 @@ export default function TabsEditor({
                 placeholder={r.defaultLabel}
                 onChange={(e) => patch(i, { label: e.target.value })}
               />
-              <span className="mono" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="mono" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {r.kind}{r.derived ? '' : ' · added'}
               </span>
               <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }}>
@@ -171,8 +172,8 @@ export default function TabsEditor({
                 <span className="sr-only">hidden</span>
               </label>
               {!r.derived ? (
-                <button type="button" className="muted-link" title="Remove view" onClick={() => remove(i)}>
-                  <XMarkIcon className="h-4 w-4" aria-hidden />
+                <button type="button" className="muted-link" title="Remove view" aria-label="Remove view" onClick={() => remove(i)}>
+                  ✕
                 </button>
               ) : (
                 <span aria-hidden />
@@ -228,7 +229,7 @@ export default function TabsEditor({
               setPick('');
             }}
           >
-            <PlusIcon className="h-4 w-4" aria-hidden /> Add view
+            + Add view
           </button>
         </div>
       )}

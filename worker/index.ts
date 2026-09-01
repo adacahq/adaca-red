@@ -13,6 +13,11 @@ import {
   DEFAULT_IMAGE_SIZES,
 } from 'vinext/server/image-optimization';
 import handler from 'vinext/server/app-router-entry';
+import { createServiceClient, runSweep } from '../src/lib/purge/run';
+
+interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
 
 interface Env {
   ASSETS: Fetcher;
@@ -28,6 +33,15 @@ interface Env {
   };
   BASIC_AUTH_USERNAME: string;
   BASIC_AUTH_PASSWORD: string;
+  // Public-surface abuse protection (see wrangler.jsonc unsafe.bindings);
+  // absent in dev, where the limiters are skipped.
+  SUBMIT_RATE_LIMITER?: RateLimiter;
+  PUMP_RATE_LIMITER?: RateLimiter;
+  // Purge cron (scheduled handler). VITE_SUPABASE_URL is baked in at build;
+  // the service key is a secret binding.
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  /** Canonical public origin for report links in cron-driven runs. */
+  PUBLIC_ORIGIN?: string;
 }
 
 interface ExecutionContext {
@@ -37,6 +51,36 @@ interface ExecutionContext {
 
 const AUTH_REALM = 'Adaca Red';
 const NOINDEX = 'noindex, nofollow, noarchive, nosnippet';
+
+/**
+ * The public no-login surface (docs/workflow-forms-plan.md §4): /d/* pages
+ * plus the static assets they load. Everything else stays behind Basic Auth.
+ * Assets are content-hashed build artifacts — nothing sensitive.
+ */
+function isPublicPath(path: string): boolean {
+  return (
+    path === '/d' ||
+    path.startsWith('/d/') ||
+    path.startsWith('/assets/') ||
+    path === '/favicon.ico'
+  );
+}
+
+/** Per-IP rate limits on the public write endpoints (no-op when unbound). */
+async function publicRateLimited(request: Request, env: Env, path: string): Promise<boolean> {
+  if (request.method !== 'POST') return false;
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  if (path.startsWith('/d/s/')) {
+    // Status-page pump: sequential ~1/s while a run is live.
+    const res = await env.PUMP_RATE_LIMITER?.limit({ key: ip });
+    return res ? !res.success : false;
+  }
+  if (path.endsWith('/submit')) {
+    const res = await env.SUBMIT_RATE_LIMITER?.limit({ key: ip });
+    return res ? !res.success : false;
+  }
+  return false;
+}
 
 function unauthorized(): Response {
   return new Response('Authentication required.', {
@@ -93,6 +137,20 @@ export default {
       return withNoIndex(asset);
     }
 
+    // Public no-login surface: skips Basic Auth, gets rate limits instead.
+    if (isPublicPath(url.pathname)) {
+      if (await publicRateLimited(request, env, url.pathname)) {
+        return withNoIndex(
+          new Response(JSON.stringify({ error: 'Too many requests — please slow down.' }), {
+            status: 429,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+      const response = await handler.fetch(request, env, ctx);
+      return withNoIndex(response);
+    }
+
     // Everything else is behind Basic Auth.
     if (!isAuthorized(request, env)) {
       return unauthorized();
@@ -121,5 +179,32 @@ export default {
     // Delegate everything else to vinext; tag the response.
     const response = await handler.fetch(request, env, ctx);
     return withNoIndex(response);
+  },
+
+  /**
+   * Hourly sweep (wrangler.jsonc triggers.crons): pumps abandoned workflow
+   * runs to completion and hard-purges nodes past their retention clock
+   * (whole node: row + revisions + documents + storage objects).
+   */
+  async scheduled(_event: unknown, env: Env, ctx: ExecutionContext): Promise<void> {
+    const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) {
+      console.warn('purge sweep skipped: SUPABASE_SERVICE_ROLE_KEY not set');
+      return;
+    }
+    const origin = env.PUBLIC_ORIGIN ?? 'http://localhost:3000';
+    const db = createServiceClient(import.meta.env.VITE_SUPABASE_URL, serviceKey);
+    ctx.waitUntil(
+      runSweep(db, origin)
+        .then((r) =>
+          console.log(
+            `sweep: pumped ${r.pumpedUnits} units across ${r.pumpedRuns} runs; ` +
+              `purged ${r.purgedSubmissions} submissions + ${r.purgedAssessments} assessments ` +
+              `(${r.removedObjects} objects)` +
+              (r.errors.length ? `; errors: ${r.errors.join(' | ')}` : ''),
+          ),
+        )
+        .catch((err) => console.error('sweep failed', err)),
+    );
   },
 };

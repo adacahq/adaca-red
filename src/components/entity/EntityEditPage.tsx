@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getDefinition, fieldsOf } from '@/lib/definitions/server';
@@ -24,20 +25,27 @@ export default async function EntityEditPage({
   const action = submitNode.bind(null, { type: typeKey, id, parent: node.parent_id, revalidate: basePath });
 
   return (
-    <div className="">
-      <h1 className="mb-8" style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em' }}>
+    <div>
+      <p className="eyebrow rv">Edit</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
         Edit {title}
       </h1>
-      <EntityForm
-        fields={fieldsOf(def)}
-        initial={(node.data ?? {}) as Record<string, unknown>}
-        submit={action}
-        basePath={basePath}
-        submitLabel="Save"
-        cancelHref={`${basePath}/${id}`}
-        entityLabel={title}
-        mode="edit"
-      />
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        Update this {title.toLowerCase()}&rsquo;s fields. Changes are saved as a new revision.
+      </p>
+
+      <div className="mt-10">
+        <EntityForm
+          fields={fieldsOf(def)}
+          initial={(node.data ?? {}) as Record<string, unknown>}
+          submit={action}
+          basePath={basePath}
+          submitLabel="Save"
+          cancelHref={`${basePath}/${id}`}
+          entityLabel={title}
+          mode="edit"
+        />
+      </div>
     </div>
   );
 }

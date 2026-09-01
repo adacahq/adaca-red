@@ -1,26 +1,21 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  PlusIcon,
-  TrashIcon,
-  PencilSquareIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  Squares2X2Icon,
-} from '@heroicons/react/20/solid';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import TagInput from '@/components/ui/TagInput';
 import ChoicesEditor from '@/components/ui/ChoicesEditor';
 import TabsEditor from '@/components/ui/TabsEditor';
+import DataTable, { type Column } from '@/components/ui/DataTable';
+import EmptyState from '@/components/ui/EmptyState';
 import { NODE_ICON_NAMES, NodeTypeIcon } from '@/lib/views/icons';
 import { useConfirm } from '@/components/ui/Confirm';
 import { getChoices } from '@/lib/definitions/choices';
 import type { ChoiceOption, DefinitionRow, EdgePair, FieldDef, TabSpec } from '@/lib/supabase/types';
 import { saveDefinition, createDefinition, deleteDefinition } from '@/lib/definitions/actions';
+import AdminNav from '../AdminNav';
 
 const DATA_TYPES = ['text', 'number', 'enum', 'date', 'boolean', 'richtext', 'user', 'users'] as const;
 const DATA_TYPE_LABELS: Record<(typeof DATA_TYPES)[number], string> = {
@@ -118,14 +113,25 @@ export default function DefinitionsEditor({ definitions }: { definitions: Defini
 
   return (
     <div>
-      <div className="mb-6 flex justify-end">
-        <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-          <PlusIcon className="h-4 w-4" /> New type
-        </Button>
+      <p className="eyebrow rv">Admin</p>
+      <div className="flex items-end justify-between gap-6 flex-wrap">
+        <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>Definitions</h1>
+        <span className="rv" style={{ '--i': 2 } as CSSProperties}>
+          <Button variant="primary" size="sm" onClick={() => setCreating(true)}>New type</Button>
+        </span>
       </div>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        The node &amp; edge type registry — every form, filter, table and RED editor in the
+        app is generated from what&rsquo;s configured here. Renaming a field&rsquo;s key or
+        removing a choice can orphan existing records&rsquo; data, so change with care.
+      </p>
 
-      <TypeSection title="Node types" items={nodes} onEdit={setEditing} onViews={setViewing} onRemove={remove} />
-      <TypeSection title="Edge types" items={edges} onEdit={setEditing} onRemove={remove} />
+      <AdminNav />
+
+      <div className="mt-10 rv" style={{ '--i': 3 } as CSSProperties}>
+        <TypeSection title="Node types" items={nodes} onEdit={setEditing} onViews={setViewing} onRemove={remove} />
+        <TypeSection title="Edge types" items={edges} onEdit={setEditing} onRemove={remove} />
+      </div>
 
       {editing && <EditModal definition={editing} nodeOptions={nodeOptions} onClose={() => setEditing(null)} />}
       {viewing && <ViewsModal definition={viewing} defs={defsMap} onClose={() => setViewing(null)} />}
@@ -147,34 +153,58 @@ function TypeSection({
   onViews?: (d: DefinitionRow) => void;
   onRemove: (d: DefinitionRow) => void;
 }) {
+  const cols: Column<DefinitionRow>[] = [
+    {
+      key: 'label',
+      header: 'Type',
+      cell: (def) => (
+        <div>
+          <div style={{ color: 'var(--fg)', fontWeight: 500 }}>{def.label}</div>
+          <div className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>{def.key}</div>
+        </div>
+      ),
+      sortValue: (def) => def.label.toLowerCase(),
+    },
+    {
+      key: 'fields',
+      header: 'Fields',
+      mono: true,
+      cellStyle: { color: 'var(--muted)' },
+      cell: (def) => `${(((def.config ?? {}) as { fields?: unknown[] }).fields ?? []).length} fields`,
+      sortValue: (def) => (((def.config ?? {}) as { fields?: unknown[] }).fields ?? []).length,
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      cell: (def) => (
+        <div className="flex items-center gap-4 justify-end">
+          {onViews && (
+            <button type="button" className="muted-link" onClick={() => onViews(def)}>
+              Views
+            </button>
+          )}
+          <button type="button" className="muted-link" onClick={() => onEdit(def)}>
+            Edit
+          </button>
+          <button type="button" className="muted-link" onClick={() => onRemove(def)}>
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
   return (
-    <section className="mb-8">
-      <p className="field-label">{title}</p>
-      <div style={{ borderTop: '1px solid var(--line)' }}>
-        {items.map((def) => {
-          const fieldCount = (((def.config ?? {}) as { fields?: unknown[] }).fields ?? []).length;
-          return (
-            <div key={def.id} className="flex items-center gap-3 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
-              <span style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 500 }}>{def.label}</span>
-              <span className="mono" style={{ fontSize: 11, color: 'var(--muted-2)' }}>{def.key}</span>
-              <span style={{ flex: 1 }} />
-              <span className="mono" style={{ fontSize: 11, color: 'var(--muted-2)' }}>{fieldCount} fields</span>
-              {onViews && (
-                <button type="button" className="muted-link" title="Views (sidebar + detail tabs)" onClick={() => onViews(def)}>
-                  <Squares2X2Icon className="h-4 w-4" aria-hidden />
-                </button>
-              )}
-              <button type="button" className="muted-link" title="Edit fields & structure" onClick={() => onEdit(def)}>
-                <PencilSquareIcon className="h-4 w-4" aria-hidden />
-              </button>
-              <button type="button" className="muted-link" title="Delete" onClick={() => onRemove(def)}>
-                <TrashIcon className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-          );
-        })}
-        {items.length === 0 && <p className="py-3 text-[13px]" style={{ color: 'var(--muted-2)' }}>None.</p>}
+    <section className="mb-10">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="zone-label">{title}</span>
+        <span className="flex-1 divider" aria-hidden />
       </div>
+      {items.length === 0 ? (
+        <EmptyState eyebrow={title} title={`No ${title.toLowerCase()} yet`} description="Create one with New type, above." />
+      ) : (
+        <DataTable columns={cols} rows={items} getRowKey={(d) => d.id} empty="None." />
+      )}
     </section>
   );
 }
@@ -280,11 +310,7 @@ function EditModal({
         </>
       }
     >
-      {error && (
-        <div className="mb-5 px-4 py-3 text-[13px]" style={{ background: 'var(--red-tint)', color: 'var(--red-ink)', border: '1px solid color-mix(in srgb, var(--crit) 25%, transparent)' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="alert error mb-5">{error}</div>}
 
       <div className="flex flex-col gap-4 mb-6" style={{ maxWidth: 420 }}>
         <div>
@@ -303,21 +329,21 @@ function EditModal({
               {pairs.map((p, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Select mono value={p.from} onChange={(v) => patchPair(i, { from: v })} options={nodeOptions} ariaLabel="From type" />
-                  <span style={{ color: 'var(--muted-2)' }} aria-hidden>→</span>
+                  <span style={{ color: 'var(--muted)' }} aria-hidden>→</span>
                   <Select mono value={p.to} onChange={(v) => patchPair(i, { to: v })} options={nodeOptions} ariaLabel="To type" />
-                  <button type="button" className="muted-link" title="Remove relationship" onClick={() => removePair(i)}>
-                    <TrashIcon className="h-4 w-4" aria-hidden />
+                  <button type="button" className="muted-link" aria-label="Remove relationship" title="Remove relationship" onClick={() => removePair(i)}>
+                    ✕
                   </button>
                 </div>
               ))}
               {pairs.length === 0 && (
-                <p className="text-[12px]" style={{ color: 'var(--muted-2)' }}>
+                <p className="text-[12px]" style={{ color: 'var(--muted)' }}>
                   No relationships yet — this edge can’t connect anything.
                 </p>
               )}
             </div>
             <button type="button" className="btn btn-ghost btn-sm mt-2" onClick={addPair}>
-              <PlusIcon className="h-4 w-4" /> Add relationship
+              + Add relationship
             </button>
           </div>
         )}
@@ -345,22 +371,22 @@ function EditModal({
                   options={DATA_TYPES.map((t) => ({ value: t, label: DATA_TYPE_LABELS[t] }))}
                 />
               </div>
-              <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }}>
+              <label className="check">
                 <input type="checkbox" checked={f.required} onChange={(e) => patch(i, { required: e.target.checked })} /> req
               </label>
-              <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }}>
+              <label className="check">
                 <input type="checkbox" checked={f.filterable} onChange={(e) => patch(i, { filterable: e.target.checked })} /> filter
               </label>
               {isUserType(f.data_type) && (
-                <label className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--muted)' }} title="Surface items where this person is you in the For You tab">
+                <label className="check" title="Surface items where this person is you in the For You tab">
                   <input type="checkbox" checked={f.forYou} onChange={(e) => patch(i, { forYou: e.target.checked })} /> for you
                 </label>
               )}
               <span style={{ flex: 1 }} />
-              <div className="flex items-center gap-1">
-                <button type="button" className="muted-link" title="Up" onClick={() => moveField(i, -1)}><ChevronUpIcon className="h-4 w-4" /></button>
-                <button type="button" className="muted-link" title="Down" onClick={() => moveField(i, 1)}><ChevronDownIcon className="h-4 w-4" /></button>
-                <button type="button" className="muted-link" title="Remove" onClick={() => removeField(i)}><TrashIcon className="h-4 w-4" /></button>
+              <div className="flex items-center gap-3">
+                <button type="button" className="muted-link" aria-label="Move up" title="Up" onClick={() => moveField(i, -1)}>↑</button>
+                <button type="button" className="muted-link" aria-label="Move down" title="Down" onClick={() => moveField(i, 1)}>↓</button>
+                <button type="button" className="muted-link" aria-label="Remove field" title="Remove" onClick={() => removeField(i)}>✕</button>
               </div>
             </div>
 
@@ -391,7 +417,7 @@ function EditModal({
       </div>
 
       <button type="button" className="btn btn-ghost btn-sm mt-3" onClick={addField}>
-        <PlusIcon className="h-4 w-4" /> Add field
+        + Add field
       </button>
     </Modal>
   );
@@ -438,11 +464,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      {error && (
-        <div className="mb-5 px-4 py-3 text-[13px]" style={{ background: 'var(--red-tint)', color: 'var(--red-ink)', border: '1px solid color-mix(in srgb, var(--crit) 25%, transparent)' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="alert error mb-5">{error}</div>}
       <div className="flex flex-col gap-4">
         <div>
           <label className="field-label">Kind</label>
@@ -461,7 +483,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
           <label className="field-label">Label</label>
           <input className="field-input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Objective" />
         </div>
-        <p className="text-[12px]" style={{ color: 'var(--muted-2)' }}>
+        <p className="text-[12px]" style={{ color: 'var(--muted)' }}>
           After creating, click Edit to add fields.
         </p>
       </div>
@@ -526,45 +548,54 @@ function ViewsModal({
         </>
       }
     >
-      {error && (
-        <div className="mb-5 px-4 py-3 text-[13px]" style={{ background: 'var(--red-tint)', color: 'var(--red-ink)', border: '1px solid color-mix(in srgb, var(--crit) 25%, transparent)' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="alert error mb-5">{error}</div>}
 
-      <p style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: 14 }}>
-        Sidebar
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 36 }}>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="zone-label">Sidebar</span>
+        <span className="flex-1 divider" aria-hidden />
+      </div>
+      <div className="flex flex-col gap-5 mb-9">
         <div>
-          <label className="flex items-center gap-2.5 text-[13px]" style={{ color: 'var(--ink)' }}>
+          <label className="check">
             <input type="checkbox" checked={sidebar} onChange={(e) => setSidebar(e.target.checked)} />
             Show in sidebar
           </label>
-          <p className="text-[12px]" style={{ color: 'var(--muted-2)', marginTop: 4 }}>
+          <p className="text-[12px] mt-1" style={{ color: 'var(--muted)' }}>
             Adds a register link for this type to the nav.
           </p>
         </div>
         <div>
           <label className="field-label">Icon</label>
-          <div className="flex items-center gap-2">
-            <NodeTypeIcon name={icon} className="h-5 w-5 shrink-0" style={{ color: 'var(--muted)' }} aria-hidden />
-            <div style={{ width: 180 }}>
-              <Select
-                fullWidth
-                value={icon}
-                onChange={setIcon}
-                options={[{ value: '', label: 'Default' }, ...NODE_ICON_NAMES.map((n) => ({ value: n, label: n }))]}
-                ariaLabel="Type icon"
-              />
-            </div>
+          <div className="seg">
+            <button
+              type="button"
+              className={icon === '' ? 'on' : undefined}
+              aria-label="Default icon"
+              title="Default"
+              onClick={() => setIcon('')}
+            >
+              <NodeTypeIcon name="" className="h-4 w-4" aria-hidden />
+            </button>
+            {NODE_ICON_NAMES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={icon === n ? 'on' : undefined}
+                aria-label={n}
+                title={n}
+                onClick={() => setIcon(n)}
+              >
+                <NodeTypeIcon name={n} className="h-4 w-4" aria-hidden />
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <p style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: 14 }}>
-        Page Tabs
-      </p>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="zone-label">Page tabs</span>
+        <span className="flex-1 divider" aria-hidden />
+      </div>
       <TabsEditor def={definition} defs={defs} value={tabs} onChange={setTabs} />
     </Modal>
   );

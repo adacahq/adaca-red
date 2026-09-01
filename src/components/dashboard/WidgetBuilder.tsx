@@ -51,11 +51,12 @@ function enumFields(fields: FieldDef[]): FieldDef[] {
   return fields.filter((f) => f.data_type === 'enum');
 }
 
+/** A `.field`/`.field-label` stacked row — the same grammar EntityForm uses. */
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid var(--line)' }}>
-      <span className="field-label" style={{ margin: 0, width: 110, flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+    <div className="field">
+      <span className="field-label">{label}</span>
+      {children}
     </div>
   );
 }
@@ -185,35 +186,34 @@ export default function WidgetBuilder({
   const showSource = type ? WIDGET_BY_TYPE[type].needsSource : false;
 
   const measureControls = (
-    <>
-      <FieldRow label="Measure">
-        <div className="flex items-center gap-2">
+    <FieldRow label="Measure">
+      <div className="flex items-center gap-2">
+        <Select
+          value={measure.kind}
+          onChange={(v) => patch({ measure: { kind: v as MeasureKind, field: v === 'count' ? undefined : measure.field } })}
+          options={MEASURE_OPTS}
+          ariaLabel="Measure"
+        />
+        {measure.kind !== 'count' && (
           <Select
-            value={measure.kind}
-            onChange={(v) => patch({ measure: { kind: v as MeasureKind, field: v === 'count' ? undefined : measure.field } })}
-            options={MEASURE_OPTS}
-            ariaLabel="Measure"
+            value={measure.field ?? ''}
+            onChange={(v) => patch({ measure: { kind: measure.kind, field: v } as Measure })}
+            options={numericFields(fields).map((f) => ({ value: f.key, label: f.label }))}
+            placeholder="Field…"
+            ariaLabel="Measure field"
           />
-          {measure.kind !== 'count' && (
-            <Select
-              value={measure.field ?? ''}
-              onChange={(v) => patch({ measure: { kind: measure.kind, field: v } as Measure })}
-              options={numericFields(fields).map((f) => ({ value: f.key, label: f.label }))}
-              placeholder="Field…"
-              ariaLabel="Measure field"
-            />
-          )}
-        </div>
-      </FieldRow>
-    </>
+        )}
+      </div>
+    </FieldRow>
   );
 
   const filterControls = enumFields(fields).length > 0 && (
-    <div className="mt-3">
+    <>
       <p className="field-label">Filters</p>
       {enumFields(fields).map((f) => (
         <FieldRow key={f.key} label={f.label}>
           <Select
+            fullWidth
             value={filterValue(f.key)}
             onChange={(v) => setFilter(f.key, v)}
             options={[{ value: '', label: 'Any' }, ...getChoices(f).map((c) => ({ value: c.key, label: c.label }))]}
@@ -221,7 +221,7 @@ export default function WidgetBuilder({
           />
         </FieldRow>
       ))}
-    </div>
+    </>
   );
 
   return (
@@ -250,34 +250,33 @@ export default function WidgetBuilder({
           <p className="text-[13px]" style={{ color: 'var(--muted)', lineHeight: 1.6 }}>
             Choose how to present the data.
           </p>
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {WIDGETS.map((w) => {
-              const Icon = w.icon;
-              return (
-                <button
-                  key={w.type}
-                  type="button"
-                  onClick={() => pickType(w.type)}
-                  className="index-card flex items-start gap-3 p-3 text-left"
-                  style={{ border: '1px solid var(--line)' }}
-                >
-                  <span style={{ color: 'var(--accent)', marginTop: 1 }}><Icon className="h-5 w-5" aria-hidden /></span>
-                  <span style={{ flex: 1 }}>
-                    <span className="block" style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--ink)' }}>{w.title}</span>
-                    <span className="block" style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{w.description}</span>
-                  </span>
-                </button>
-              );
-            })}
+          {/* A card grid, not `.seg` pills: the description is the whole point
+              of this step — "stacked bar" vs "donut" vs "kpi" is not
+              self-evident — and a title tooltip hides it behind a hover
+              nobody thinks to try. */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {WIDGETS.map((w) => (
+              <button
+                key={w.type}
+                type="button"
+                onClick={() => pickType(w.type)}
+                className="card"
+                style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <h3 style={{ marginTop: 0 }}>{w.title}</h3>
+                <p className="text-[12.5px] mt-1.5" style={{ color: 'var(--muted)', lineHeight: 1.6 }}>
+                  {w.description}
+                </p>
+              </button>
+            ))}
           </div>
         </>
       )}
 
       {step === 2 && type && (
-        <div>
+        <div className="flex flex-col gap-5">
           <FieldRow label="Title">
             <input
-              className="field-input"
               placeholder={WIDGET_BY_TYPE[type].title}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -287,6 +286,7 @@ export default function WidgetBuilder({
           {showSource && (
             <FieldRow label="Source">
               <Select
+                fullWidth
                 value={config.source ?? ''}
                 onChange={(v) => setConfig({ ...defaultsForKeep(type, v as Source) })}
                 options={sources.map((s) => ({ value: s.key, label: s.label }))}
@@ -301,6 +301,7 @@ export default function WidgetBuilder({
             <>
               <FieldRow label="Group by">
                 <Select
+                  fullWidth
                   value={config.groupBy ?? ''}
                   onChange={(v) => patch({ groupBy: v })}
                   options={categorical(fields).map((f) => ({ value: f.key, label: f.label }))}
@@ -311,6 +312,7 @@ export default function WidgetBuilder({
               {type === 'stacked-bar' && (
                 <FieldRow label="Series">
                   <Select
+                    fullWidth
                     value={config.series ?? ''}
                     onChange={(v) => patch({ series: v })}
                     options={categorical(fields).map((f) => ({ value: f.key, label: f.label }))}
@@ -327,6 +329,7 @@ export default function WidgetBuilder({
             <>
               <FieldRow label="Time field">
                 <Select
+                  fullWidth
                   value={config.timeField ?? 'created_at'}
                   onChange={(v) => patch({ timeField: v })}
                   options={dateFields(fields)}
@@ -335,6 +338,7 @@ export default function WidgetBuilder({
               </FieldRow>
               <FieldRow label="Bucket">
                 <Select
+                  fullWidth
                   value={config.bucket ?? 'month'}
                   onChange={(v) => patch({ bucket: v as 'day' | 'week' | 'month' })}
                   options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]}
@@ -343,6 +347,7 @@ export default function WidgetBuilder({
               </FieldRow>
               <FieldRow label="Split by">
                 <Select
+                  fullWidth
                   value={config.series ?? ''}
                   onChange={(v) => patch({ series: v || undefined })}
                   options={[{ value: '', label: 'None' }, ...categorical(fields).map((f) => ({ value: f.key, label: f.label }))]}
@@ -354,21 +359,21 @@ export default function WidgetBuilder({
           )}
 
           {type === 'table' && (
-            <div className="mt-3">
-              <p className="field-label">Columns</p>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 py-1">
-                {[{ key: 'title', label: 'Title' }, ...fields.filter((f) => f.key !== 'title').map((f) => ({ key: f.key, label: f.label }))].map((f) => (
-                  <label key={f.key} className="flex items-center gap-2" style={{ fontSize: 13, color: 'var(--ink)', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={(config.columns ?? []).includes(f.key)}
-                      onChange={() => toggleColumn(f.key)}
-                      style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
-                    />
-                    {f.label}
-                  </label>
-                ))}
-              </div>
+            <>
+              <FieldRow label="Columns">
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {[{ key: 'title', label: 'Title' }, ...fields.filter((f) => f.key !== 'title').map((f) => ({ key: f.key, label: f.label }))].map((f) => (
+                    <label key={f.key} className="check">
+                      <input
+                        type="checkbox"
+                        checked={(config.columns ?? []).includes(f.key)}
+                        onChange={() => toggleColumn(f.key)}
+                      />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+              </FieldRow>
               <FieldRow label="Sort by">
                 <div className="flex items-center gap-2">
                   <Select
@@ -389,21 +394,19 @@ export default function WidgetBuilder({
               </FieldRow>
               <FieldRow label="Row limit">
                 <input
-                  className="field-input"
                   type="number"
-                  style={{ width: 110 }}
+                  style={{ maxWidth: 110 }}
                   value={config.limit ?? 25}
                   onChange={(e) => patch({ limit: Math.max(1, Number(e.target.value) || 25) })}
                 />
               </FieldRow>
-            </div>
+            </>
           )}
 
           {type === 'note' && (
-            <div className="mt-2">
-              <p className="field-label">Content</p>
+            <FieldRow label="Content">
               <RichText value={config.markdown ?? ''} onChange={(md) => patch({ markdown: md })} />
-            </div>
+            </FieldRow>
           )}
 
           {type !== 'note' && filterControls}

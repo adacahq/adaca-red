@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Bars2Icon, XMarkIcon, PlusIcon } from '@heroicons/react/20/solid';
 import Select from './Select';
 import { TONES, TONE_LABEL, TONE_COLOR, humanizeKey, type Tone } from '@/lib/definitions/choices';
 import type { ChoiceOption } from '@/lib/supabase/types';
@@ -83,9 +82,11 @@ export default function ChoicesEditor({
             }}
             title="Drag to reorder"
             className="shrink-0"
-            style={{ cursor: 'grab', color: 'var(--muted-2)', opacity: dragIdx === i ? 0.4 : 1 }}
+            style={{ cursor: 'grab', color: 'var(--muted)', opacity: dragIdx === i ? 0.4 : 1 }}
           >
-            <Bars2Icon className="h-4 w-4" aria-hidden />
+            <svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+              <path d="M1 1h10M1 7h10" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
           </span>
           <input
             className="field-input mono"
@@ -111,8 +112,8 @@ export default function ChoicesEditor({
             />
           </div>
           <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: TONE_COLOR[r.tone], flexShrink: 0 }} />
-          <button type="button" className="muted-link shrink-0" title="Remove" onClick={() => remove(i)}>
-            <XMarkIcon className="h-4 w-4" aria-hidden />
+          <button type="button" className="muted-link shrink-0" title="Remove" aria-label={`Remove ${r.key}`} onClick={() => remove(i)}>
+            ✕
           </button>
         </div>
       ))}
@@ -132,7 +133,7 @@ export default function ChoicesEditor({
           }}
         />
         <button type="button" className="btn btn-ghost btn-sm" onClick={add} disabled={!draft.trim()}>
-          <PlusIcon className="h-4 w-4" aria-hidden /> Add choice
+          + Add choice
         </button>
       </div>
     </div>

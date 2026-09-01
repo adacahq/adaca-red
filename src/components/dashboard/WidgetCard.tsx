@@ -1,11 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { PencilSquareIcon, XMarkIcon, Bars2Icon, DocumentDuplicateIcon } from '@heroicons/react/20/solid';
 
 /**
- * Widget chrome: a hairline card with a mono title bar. In edit mode it shows a
- * drag handle (`.widget-drag`, the grid's drag selector) plus configure/remove.
+ * Widget chrome: the shared `.chart-card` surface with a `.chart-head` title
+ * row (title left, controls right, baseline-aligned). In edit mode it shows
+ * a drag handle (`.widget-drag`, the grid's drag selector) plus
+ * configure/duplicate/remove.
  */
 export default function WidgetCard({
   title,
@@ -27,39 +28,37 @@ export default function WidgetCard({
   children: ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col" style={{ border: '1px solid var(--line)', background: 'var(--bg)' }}>
-      <header
-        className="flex items-center gap-2 px-3 py-2"
-        style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-alt)' }}
-      >
-        {editing && (
-          <span className="widget-drag inline-flex shrink-0" title="Drag to move" style={{ cursor: 'grab', color: 'var(--muted-2)' }}>
-            <Bars2Icon className="h-4 w-4" aria-hidden />
+    <div className="chart-card flex h-full flex-col">
+      <div className="chart-head">
+        <span className="flex min-w-0 items-center gap-2">
+          {editing && (
+            <span className="widget-drag shrink-0" title="Drag to move" style={{ cursor: 'grab', color: 'var(--muted)' }}>
+              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+                <path d="M1 1h10M1 7h10" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
+          )}
+          <span className="field-label truncate" style={{ margin: 0 }}>
+            {title}
           </span>
-        )}
-        <span
-          className="mono"
-          style={{ flex: 1, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        >
-          {title}
         </span>
         {editing && (
-          <>
-            <button type="button" className="muted-link shrink-0" title="Configure" onClick={onEdit}>
-              <PencilSquareIcon className="h-4 w-4" aria-hidden />
+          <span className="flex shrink-0 items-center gap-3">
+            <button type="button" className="muted-link" title="Configure" aria-label="Configure" onClick={onEdit}>
+              Edit
             </button>
-            <button type="button" className="muted-link shrink-0" title="Duplicate" onClick={onDuplicate}>
-              <DocumentDuplicateIcon className="h-4 w-4" aria-hidden />
+            <button type="button" className="muted-link" title="Duplicate" aria-label="Duplicate" onClick={onDuplicate}>
+              Copy
             </button>
-            <button type="button" className="muted-link shrink-0" title="Remove" onClick={onRemove}>
-              <XMarkIcon className="h-4 w-4" aria-hidden />
+            <button type="button" className="muted-link" title="Remove" aria-label="Remove" onClick={onRemove}>
+              ✕
             </button>
-          </>
+          </span>
         )}
-      </header>
-      <div className="relative flex-1" style={{ overflow: 'auto', padding: 12, minHeight: 0 }}>
+      </div>
+      <div className="relative flex-1" style={{ overflow: 'auto', minHeight: 0 }}>
         {loading ? (
-          <div className="flex h-full items-center justify-center text-[12px]" style={{ color: 'var(--muted-2)' }}>Loading…</div>
+          <div className="flex h-full items-center justify-center text-[12px]" style={{ color: 'var(--muted)' }}>Loading…</div>
         ) : error ? (
           <div className="flex h-full items-center justify-center text-[12px]" style={{ color: 'var(--crit)' }}>Couldn’t load</div>
         ) : (

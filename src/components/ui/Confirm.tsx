@@ -59,7 +59,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           </>
         }
       >
-        <div className="text-[14px]" style={{ color: 'var(--ink-2)', lineHeight: 1.6 }}>
+        <div className="text-[14px]" style={{ color: 'var(--fg)', lineHeight: 1.6 }}>
           {opts?.body ?? 'Are you sure?'}
         </div>
       </Modal>

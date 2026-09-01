@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { PlusIcon } from '@heroicons/react/20/solid';
 import RedScore from './RedScore';
 import MitigationModal from './MitigationModal';
 
@@ -42,7 +41,7 @@ export default function MitigationManager({
           </li>
         ))}
         {edges.length === 0 && (
-          <li className="py-3 text-[13px]" style={{ color: 'var(--muted-2)' }}>
+          <li className="py-3 text-[13px]" style={{ color: 'var(--muted)' }}>
             This initiative doesn&rsquo;t mitigate any risks yet.
           </li>
         )}
@@ -50,7 +49,7 @@ export default function MitigationManager({
 
       {riskOptions.length > 0 && (
         <button type="button" className="btn btn-ghost btn-sm mt-4" onClick={() => setModal({})}>
-          <PlusIcon className="h-4 w-4" /> Mitigate a risk
+          <span aria-hidden>+</span> Mitigate a risk
         </button>
       )}
 

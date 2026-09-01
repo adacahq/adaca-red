@@ -27,7 +27,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   if (!profile?.role) redirect('/no-access');
 
-  const isAdmin = profile.role === 'admin' || profile.role === 'owner';
   const [choiceMeta, defs, users] = await Promise.all([
     loadChoiceMeta(supabase),
     loadDefinitions(supabase),
@@ -41,23 +40,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const nodeDefs = Object.values(defs).filter((d) => d.kind === 'node');
 
   // The entire Register nav section is config-driven: every node type flagged
-  // "show in sidebar" (Admin → Definitions → Views), with its chosen icon.
+  // "show in sidebar" (Admin → Definitions → Views). Admin visibility and the
+  // Register/Reports/Admin tree itself are gated from `role` via `nav.ts`, not
+  // a separate isAdmin flag.
   const register = nodeDefs
     .filter((d) => nodeConfig(d).sidebar === true)
-    .map((d) => ({ name: pluralize(d.label), href: routeFor(d.key), icon: nodeConfig(d).icon }))
+    .map((d) => ({ name: pluralize(d.label), href: routeFor(d.key) }))
     .sort((a, b) => a.name.localeCompare(b.name));
-
-  // type key → icon name, so the (client) recents list can resolve any type.
-  const typeIcons = Object.fromEntries(nodeDefs.map((d) => [d.key, nodeConfig(d).icon ?? '']));
 
   return (
     <AppShell
       user={{ name: profile.name, email: profile.email, role: profile.role }}
-      isAdmin={isAdmin}
       choiceMeta={choiceMeta}
       userMeta={userMeta}
       register={register}
-      typeIcons={typeIcons}
     >
       {children}
     </AppShell>

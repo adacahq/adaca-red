@@ -1,48 +1,58 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { SunIcon, MoonIcon } from '@heroicons/react/20/solid';
 
-type Theme = 'light' | 'dark';
+/**
+ * Light/dark, the operator's choice and nothing else — the theme does not
+ * track where you are in the hierarchy. The stored choice is stamped on
+ * <html data-theme> before paint by the root layout's theme gate
+ * (`src/app/layout.tsx`); the DOM attribute is the single source of truth,
+ * subscribed to directly via a MutationObserver rather than a bespoke custom
+ * event. `useTheme()` is exported so every consumer (this toggle, `Toaster`)
+ * reads the same snapshot instead of re-deriving it.
+ */
+function subscribe(onChange: () => void): () => void {
+  const mo = new MutationObserver(onChange);
+  mo.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+  return () => mo.disconnect();
+}
 
-// The theme lives on <html data-theme>, applied before paint by the root
-// layout's inline script. We read it via useSyncExternalStore (no
-// set-state-in-effect) and notify subscribers with a custom event so every
-// toggle instance stays in sync.
-function subscribe(cb: () => void) {
-  window.addEventListener('themechange', cb);
-  return () => window.removeEventListener('themechange', cb);
+function snapshot(): boolean {
+  return document.documentElement.dataset.theme === 'dark';
 }
-function getSnapshot(): Theme {
-  return (document.documentElement.getAttribute('data-theme') as Theme) || 'dark';
-}
-function getServerSnapshot(): Theme {
-  return 'dark';
+
+/** True while dark is active. Light is the default (`getServerSnapshot`
+ *  matches the root layout's `data-theme="light"` before the pre-paint
+ *  script runs). */
+export function useTheme(): boolean {
+  return useSyncExternalStore(subscribe, snapshot, () => false);
 }
 
 export default function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const dark = useTheme();
 
   function toggle() {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
+    document.documentElement.dataset.theme = dark ? 'light' : 'dark';
     try {
-      localStorage.setItem('theme', next);
+      localStorage.setItem('red-theme', dark ? 'light' : 'dark');
     } catch {
-      /* ignore */
+      // Private mode: the choice just doesn't persist.
     }
-    window.dispatchEvent(new Event('themechange'));
   }
 
   return (
     <button
       type="button"
+      className="tgl"
       onClick={toggle}
-      className="muted-link inline-flex items-center"
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      aria-label="Toggle colour theme"
+      aria-pressed={dark}
+      title="Switch between light and dark"
     >
-      {theme === 'dark' ? <SunIcon className="h-4 w-4" aria-hidden /> : <MoonIcon className="h-4 w-4" aria-hidden />}
+      <em className={dark ? undefined : 'live'}>Light</em>
+      <em className={dark ? 'live' : undefined}>Dark</em>
     </button>
   );
 }

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminNav from '../AdminNav';
@@ -17,15 +18,22 @@ export default async function Page() {
   const { data: roles } = await supabase.from('roles').select('*').order('created_at');
 
   return (
-    <div className="">
-      <AdminNav />
-      <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.02em' }}>Attribution roles</h1>
-      <p className="mt-2 mb-6 text-[14px]" style={{ color: 'var(--muted)' }}>
-        Roles used when assigning people to items (owner, assignee, …). Distinct from
-        the top-level system role on a user account.
+    <div>
+      <p className="eyebrow rv">Admin</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        Attribution roles
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        Roles used when assigning people to initiatives, risks and incidents — owner,
+        assignee, reviewer. Distinct from the system role on a user account, which gates
+        access to the app itself; these are seeded data, not editable here.
       </p>
 
-      <RolesTable roles={roles ?? []} />
+      <AdminNav />
+
+      <div className="mt-10 rv" style={{ '--i': 3 } as CSSProperties}>
+        <RolesTable roles={roles ?? []} />
+      </div>
     </div>
   );
 }

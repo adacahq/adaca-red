@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusIcon } from '@heroicons/react/20/solid';
 import type { FieldDef, NodeRow } from '@/lib/supabase/types';
 import { saveNode, reorderNodes } from '@/lib/nodes/actions';
 import Select from '@/components/ui/Select';
@@ -26,6 +25,10 @@ interface Container { id: string; label: string; dividerBefore?: boolean }
  * field (`groupBy`), draggable between columns (writes the field) and reorderable
  * (writes `position`). Nothing here is bound to a specific node type — the type,
  * the grouping field and the column set all arrive as props.
+ *
+ * Drag mechanics are native HTML5 drag-and-drop on the whole card face (not a
+ * `.grip`-only handle) — that behaviour is unchanged from before the restyle;
+ * only the chrome (`.board`/`.bcol`/`.bhead`/`.card`/`.badd`/`.bdrop`) is new.
  */
 export default function KanbanBoard({
   rootId,
@@ -147,56 +150,48 @@ export default function KanbanBoard({
   }
 
   function Indicator() {
-    return (
-      <div
-        aria-hidden
-        style={{ height: 1, background: 'color-mix(in srgb, var(--accent) 55%, transparent)', margin: '2px 0' }}
-      />
-    );
+    return <div aria-hidden className="bdrop" />;
   }
 
   return (
     <div className="my-4">
       {containers.length > 1 && (
-        <div className="mb-4 flex items-center gap-3">
-          <span className="field-label" style={{ margin: 0 }}>Container</span>
-          <Select
-            value={container}
-            onChange={(v) => setContainer(v)}
-            options={containers.map((c) => ({ value: c.id, label: c.label, dividerBefore: c.dividerBefore }))}
-            ariaLabel="Board container"
-          />
+        <div className="bfilters">
+          <label>
+            <span className="flabel">Container</span>
+            <Select
+              value={container}
+              onChange={(v) => setContainer(v)}
+              options={containers.map((c) => ({ value: c.id, label: c.label, dividerBefore: c.dividerBefore }))}
+              ariaLabel="Board container"
+            />
+          </label>
         </div>
       )}
 
-      <div className="flex gap-3 overflow-x-auto pb-2" style={{ alignItems: 'flex-start' }}>
+      <div className="board">
         {columns.map((col) => {
           const cards = cardsIn(col);
           const isOver = dragOver?.col === col;
           return (
             <div
               key={col || 'none'}
+              className={`bcol${isOver ? ' dragover' : ''}`}
               onDragOver={(e) => {
                 if (!dragId) return;
                 e.preventDefault();
                 setDragOver({ col, index: cards.filter((c) => c.id !== dragId).length });
               }}
               onDrop={() => handleDrop(col, dragOver?.col === col ? dragOver.index : cards.length)}
-              style={{
-                width: 248,
-                flexShrink: 0,
-                background: isOver ? 'var(--bg-elev)' : 'var(--bg-alt)',
-                border: `1px solid ${isOver ? 'color-mix(in srgb, var(--accent) 28%, var(--line))' : 'var(--line)'}`,
-                transition: 'background .15s ease, border-color .15s ease',
-              }}
+              style={{ background: isOver ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : undefined }}
             >
-              <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: '1px solid var(--line)' }}>
-                {col ? <Chip value={col} /> : <span className="mono" style={{ fontSize: 10, color: 'var(--muted-2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>No status</span>}
+              <div className="bhead">
+                {col ? <Chip value={col} /> : <span className="bname">No status</span>}
                 <span style={{ flex: 1 }} />
-                <span className="mono" style={{ fontSize: 11, color: 'var(--muted-2)' }}>{cards.length}</span>
+                <span className="n">{cards.length}</span>
               </div>
 
-              <div className="p-2 flex flex-col" style={{ minHeight: 60, gap: 8 }}>
+              <div className="bcards">
                 {(() => {
                   let visibleIdx = -1;
                   return cards.map((t) => {
@@ -222,24 +217,11 @@ export default function KanbanBoard({
                             setDragOver({ col, index: before ? here : here + 1 });
                           }}
                           onClick={() => setEdit(t)}
-                          className="index-card"
-                          style={{
-                            border: '1px solid var(--line)',
-                            background: 'var(--bg)',
-                            padding: '10px 11px',
-                            cursor: 'grab',
-                            opacity: isDragged ? 0.4 : 1,
-                          }}
+                          className={isDragged ? 'card dragging' : 'card'}
+                          style={{ cursor: 'grab' }}
                         >
-                          <p style={{ fontSize: 13.5, color: 'var(--ink)', margin: 0, lineHeight: 1.4 }}>{t.title}</p>
-                          {containerTag(t) && (
-                            <span
-                              className="mono mt-1.5 inline-block"
-                              style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-2)', border: '1px solid var(--line)', padding: '1px 5px' }}
-                            >
-                              {containerTag(t)}
-                            </span>
-                          )}
+                          <h3>{t.title}</h3>
+                          {containerTag(t) && <span className="bsprint">{containerTag(t)}</span>}
                         </div>
                       </div>
                     );
@@ -269,14 +251,13 @@ export default function KanbanBoard({
                 ) : (
                   <button
                     type="button"
-                    className="muted-link mono flex items-center gap-1"
-                    style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 2px' }}
+                    className="badd"
                     onClick={() => {
                       setAdding(col);
                       setAddTitle('');
                     }}
                   >
-                    <PlusIcon className="h-3.5 w-3.5" aria-hidden /> Add
+                    + Add
                   </button>
                 )}
               </div>

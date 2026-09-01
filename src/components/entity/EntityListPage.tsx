@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { PlusIcon } from '@heroicons/react/20/solid';
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { getDefinition, filterableFields, fieldsOf, nodeConfig } from '@/lib/definitions/server';
 import { listNodes } from '@/lib/nodes/queries';
-import { iconFor } from '@/lib/views/icons';
+import { iconFor, NodeTypeIcon } from '@/lib/views/icons';
 import FilterBar from './FilterBar';
 import Register from './Register';
 import ExportButton from './ExportButton';
@@ -37,36 +37,35 @@ export default async function EntityListPage({
   const filters = flatten(searchParams);
   const rows = await listNodes(supabase, typeKey, filters);
   const cols = filterableFields(def);
+  const count = rows.length;
+  const word = count === 1 ? def.label.toLowerCase() : title.toLowerCase();
+  const iconName = nodeConfig(def).icon;
 
   return (
-    <div className="">
-      <div className="mb-2 flex items-center gap-3">
-        <span
-          className="mono"
-          style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--muted-2)', textTransform: 'uppercase' }}
-        >
-          Register
+    <div>
+      <p className="eyebrow rv">Register</p>
+      <div className="flex items-end justify-between gap-6 flex-wrap">
+        <h1 className="view-title rv flex items-center gap-3" style={{ '--i': 1 } as CSSProperties}>
+          {/* The register list-header icon (spec exception): a static component
+              (NodeTypeIcon) so resolving it doesn't read as "creating a
+              component during render" (react-hooks/static-components). */}
+          <NodeTypeIcon name={iconName} aria-hidden style={{ width: 30, height: 30, color: 'var(--accent)', flexShrink: 0 }} />
+          {title}
+        </h1>
+        <span className="rv flex items-center gap-3" style={{ '--i': 2 } as CSSProperties}>
+          <ExportButton typeKey={typeKey} entityLabel={def.label} fields={fieldsOf(def)} />
+          <Link href={`${basePath}/new`} className="btn btn-primary sm">
+            New {def.label}
+          </Link>
         </span>
-        <span className="divider" style={{ flex: 1 }} aria-hidden />
-        <ExportButton typeKey={typeKey} entityLabel={def.label} fields={fieldsOf(def)} />
-        <Link href={`${basePath}/new`} className="btn btn-primary btn-sm">
-          <PlusIcon className="h-4 w-4" aria-hidden /> New
-        </Link>
       </div>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        {count} {word} on record. Filter by any tracked field, or open one for the full detail.
+      </p>
 
-      <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-        {title}
-      </h1>
-
-      <div className="mt-6">
+      <div className="mt-10">
         <FilterBar fields={cols} />
-        <Register
-          rows={rows}
-          columns={cols}
-          basePath={basePath}
-          entityLabel={def.label}
-          icon={iconFor(nodeConfig(def).icon)}
-        />
+        <Register rows={rows} columns={cols} basePath={basePath} entityLabel={def.label} icon={iconFor(iconName)} />
       </div>
     </div>
   );

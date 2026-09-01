@@ -53,6 +53,7 @@ export default async function RiskMitigations({
   return (
     <div className="my-4">
       <HeadlineMetrics
+        variant="slates"
         metrics={[
           { label: 'Inherent (L×I)', value: String(inherent || '–') },
           { label: 'Residual', value: String(inherent ? res : '–'), note: `${coverage}% covered` },

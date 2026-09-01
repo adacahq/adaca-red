@@ -24,25 +24,28 @@ const COLORS = {
   Duration: 'var(--accent-3)',
 } as const;
 
-const axisTick = { fontSize: 10, fontFamily: 'var(--font-mono)', fill: 'var(--muted-2)' };
+const axisTick = { fontSize: 10, fontFamily: 'var(--font-mono)', fill: 'var(--muted)' };
+const tooltipStyle = { fontSize: 12, background: 'var(--card)', border: '1px solid var(--card-line)', color: 'var(--fg)' };
 
 export default function RedTrend({ series }: { series: RedPoint[] }) {
   if (series.length === 0) {
-    return <p className="text-[13px]" style={{ color: 'var(--muted-2)' }}>No assessments yet.</p>;
+    return <p className="text-[13px]" style={{ color: 'var(--muted)' }}>No assessments yet.</p>;
   }
 
   return (
-    <div className="my-4 grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div>
-        <p className="field-label">Composite (0–12, stacked)</p>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="chart-card">
+        <div className="chart-head">
+          <p className="field-label" style={{ margin: 0 }}>Composite (0–12, stacked)</p>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
             <CartesianGrid vertical={false} stroke="var(--line)" />
             <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={{ stroke: 'var(--line)' }} />
             <YAxis domain={[0, 12]} ticks={[0, 4, 8, 12]} tick={axisTick} tickLine={false} axisLine={false} />
             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-              contentStyle={{ fontSize: 12, background: 'var(--bg-alt)', border: '1px solid var(--line)', color: 'var(--ink)' }}
+              cursor={{ fill: 'var(--ghost)' }}
+              contentStyle={tooltipStyle}
               labelStyle={{ color: 'var(--muted)' }}
             />
             <Bar dataKey="Duration" stackId="red" fill={COLORS.Duration} />
@@ -51,16 +54,18 @@ export default function RedTrend({ series }: { series: RedPoint[] }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div>
-        <p className="field-label">By axis (0–4, grouped)</p>
+      <div className="chart-card">
+        <div className="chart-head">
+          <p className="field-label" style={{ margin: 0 }}>By axis (0–4, grouped)</p>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
             <CartesianGrid vertical={false} stroke="var(--line)" />
             <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={{ stroke: 'var(--line)' }} />
             <YAxis domain={[0, 4]} ticks={[0, 1, 2, 3, 4]} tick={axisTick} tickLine={false} axisLine={false} />
             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-              contentStyle={{ fontSize: 12, background: 'var(--bg-alt)', border: '1px solid var(--line)', color: 'var(--ink)' }}
+              cursor={{ fill: 'var(--ghost)' }}
+              contentStyle={tooltipStyle}
               labelStyle={{ color: 'var(--muted)' }}
             />
             <Bar dataKey="Relevance" fill={COLORS.Relevance} />

@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { XMarkIcon } from '@heroicons/react/20/solid';
 import { saveEdge, deleteEdge } from '@/lib/nodes/actions';
 import Select from '@/components/ui/Select';
 
@@ -53,30 +52,33 @@ export default function EdgeLinker({
 
   return (
     <div className="my-4">
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, borderTop: '1px solid var(--line)' }}>
-        {linked.map((l) => (
-          <li
-            key={l.edgeId}
-            className="flex items-center gap-3 py-2.5"
-            style={{ borderBottom: '1px solid var(--line)' }}
-          >
-            <Link href={`${targetBasePath}/${l.targetId}`} className="text-link" style={{ flex: 1 }}>
-              {l.targetTitle}
-            </Link>
-            <button type="button" className="muted-link" title="Unlink" disabled={pending} onClick={() => remove(l.edgeId)}>
-              <XMarkIcon className="h-4 w-4" aria-hidden />
-            </button>
-          </li>
-        ))}
-        {linked.length === 0 && (
-          <li className="py-2.5 text-[13px]" style={{ color: 'var(--muted-2)' }}>
-            Nothing linked yet.
-          </li>
-        )}
-      </ul>
+      {linked.length > 0 ? (
+        <div className="mstones">
+          {linked.map((l, i) => (
+            <div key={l.edgeId} className="ms">
+              <span className="id">{String(i + 1).padStart(2, '0')}</span>
+              <Link href={`${targetBasePath}/${l.targetId}`} className="nm">
+                {l.targetTitle}
+              </Link>
+              <button
+                type="button"
+                className="muted-link"
+                title="Unlink"
+                aria-label={`Unlink ${l.targetTitle}`}
+                disabled={pending}
+                onClick={() => remove(l.edgeId)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="py-4 text-[13px]" style={{ color: 'var(--muted)' }}>Nothing linked yet.</p>
+      )}
 
       {options.length > 0 && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-2">
           <Select
             ariaLabel="Link target"
             placeholder="Select…"

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { listNodes, listEdgesByType } from '@/lib/nodes/queries';
 import { readRed, redTotal, type Red } from '@/lib/red';
@@ -25,13 +26,19 @@ export default async function Page() {
   });
 
   return (
-    <div className="">
-      <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.02em' }}>Portfolio</h1>
-      <p className="mt-2 mb-6 text-[14px]" style={{ color: 'var(--muted)' }}>
-        {inits.length} initiatives and their RED reach.
+    <div>
+      <p className="eyebrow rv">Reports</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
+        Portfolio
+      </h1>
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        {inits.length} initiatives and the RED reach of each — how many risks it covers, and how strongly on
+        average.
       </p>
 
-      <PortfolioTable rows={rows} />
+      <div className="mt-10 rv" style={{ '--i': 3 } as CSSProperties}>
+        <PortfolioTable rows={rows} />
+      </div>
     </div>
   );
 }

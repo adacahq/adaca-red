@@ -1,12 +1,23 @@
 'use client';
 
-import { Fragment, ReactNode } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/20/solid';
+import { useEffect, useRef, type ReactNode } from 'react';
+
+const DEFAULT_WIDTH = 520; // `.modal`'s own width; anything else is set inline
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * On-brand modal: dark scrim, hairline panel, registration mark, mono header.
- * No rounded corners; one orchestrated rise+fade on open.
+ * On-brand modal: dark scrim, hairline panel, mono header — the Canvas
+ * `.overlay` → `.modal`/`.modal.wide` → `.mhead`/`.mbody`/`.mfoot` grammar
+ * (globals.css), plain React instead of Headless UI's Dialog.
+ *
+ * `maxWidth` is Red's own prop and callers pass deliberate, arbitrary pixel
+ * widths (540, 560, 620, 640, 860…). We honour each exactly rather than
+ * snapping to the two CSS presets: bucketing "up to the next size that
+ * fits" turned a 540px modal into a 760px one, which is a redesign of six
+ * screens dressed up as a restyle. `.modal` keeps `max-width: 100%`, so
+ * narrow viewports still clamp.
  */
 export default function Modal({
   open,
@@ -14,7 +25,7 @@ export default function Modal({
   title,
   children,
   footer,
-  maxWidth = 520,
+  maxWidth = DEFAULT_WIDTH,
 }: {
   open: boolean;
   onClose: () => void;
@@ -23,73 +34,73 @@ export default function Modal({
   footer?: ReactNode;
   maxWidth?: number;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const restoreRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    restoreRef.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    // Prefer an explicit `autoFocus` element (e.g. Confirm's primary action) —
+    // Headless UI's Dialog resolved initial focus the same way — falling back
+    // to the first focusable element, then the panel itself.
+    const autofocused = panel?.querySelector<HTMLElement>('[autofocus]');
+    const first = autofocused ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
+    (first ?? panel)?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (items.length === 0) return;
+      const head = items[0];
+      const tail = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === head) {
+        e.preventDefault();
+        tail.focus();
+      } else if (!e.shiftKey && document.activeElement === tail) {
+        e.preventDefault();
+        head.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      restoreRef.current?.focus?.();
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
   return (
-    <Transition show={open} as={Fragment}>
-      <Dialog onClose={onClose} className="relative z-[60]">
-        <Transition.Child
-          as={Fragment}
-          enter="transition-opacity ease-out duration-200"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="transition-opacity ease-in duration-150"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0" style={{ background: 'rgba(5,7,11,0.72)', backdropFilter: 'blur(2px)' }} />
-        </Transition.Child>
-
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-start justify-center p-4 sm:p-6">
-            <Transition.Child
-              as={Fragment}
-              enter="transition ease-out duration-200"
-              enterFrom="opacity-0 translate-y-2"
-              enterTo="opacity-100 translate-y-0"
-              leave="transition ease-in duration-150"
-              leaveFrom="opacity-100 translate-y-0"
-              leaveTo="opacity-0 translate-y-2"
-            >
-              <Dialog.Panel
-                className="relative w-full"
-                style={{
-                  maxWidth,
-                  marginTop: '7vh',
-                  background: 'var(--bg-alt)',
-                  border: '1px solid var(--line)',
-                }}
-              >
-                <span className="mark" style={{ top: 0, left: 0 }} aria-hidden />
-                <div
-                  className="flex items-center gap-3 px-6 py-4"
-                  style={{ borderBottom: '1px solid var(--line)' }}
-                >
-                  <Dialog.Title
-                    className="mono"
-                    style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)' }}
-                  >
-                    {title}
-                  </Dialog.Title>
-                  <span style={{ flex: 1 }} />
-                  <button type="button" onClick={onClose} className="muted-link" aria-label="Close">
-                    <XMarkIcon className="h-5 w-5" aria-hidden />
-                  </button>
-                </div>
-
-                <div className="px-6 py-5">{children}</div>
-
-                {footer && (
-                  <div
-                    className="flex items-center justify-end gap-3 px-6 py-4"
-                    style={{ borderTop: '1px solid var(--line)' }}
-                  >
-                    {footer}
-                  </div>
-                )}
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+    <div
+      className="overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        className="modal"
+        style={maxWidth === DEFAULT_WIDTH ? undefined : { width: maxWidth }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+      >
+        <div className="mhead">
+          <span className="zone-label">{title}</span>
+          <button type="button" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
         </div>
-      </Dialog>
-    </Transition>
+        <div className="mbody">{children}</div>
+        {footer ? <div className="mfoot">{footer}</div> : null}
+      </div>
+    </div>
   );
 }

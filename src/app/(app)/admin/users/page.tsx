@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminNav from '../AdminNav';
@@ -27,16 +28,22 @@ export default async function AdminUsersPage() {
     .order('created_at', { ascending: true });
 
   return (
-    <div className="">
-      <AdminNav />
-      <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+    <div>
+      <p className="eyebrow rv">Admin</p>
+      <h1 className="view-title rv" style={{ '--i': 1 } as CSSProperties}>
         Users
       </h1>
-      <p className="mt-2 mb-8 text-[14px]" style={{ color: 'var(--muted)' }}>
-        Assign a system role. A user with no role is blocked until one is granted.
+      <p className="lede rv" style={{ '--i': 2 } as CSSProperties}>
+        Assign each person&rsquo;s system role — admin, owner, member or viewer. A user with
+        no role is blocked at sign-in until one is granted, and the change takes effect
+        immediately.
       </p>
 
-      <UsersTable users={users ?? []} />
+      <AdminNav />
+
+      <div className="mt-10 rv" style={{ '--i': 3 } as CSSProperties}>
+        <UsersTable users={users ?? []} />
+      </div>
     </div>
   );
 }

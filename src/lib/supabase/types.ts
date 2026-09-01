@@ -20,12 +20,15 @@ export type Json =
 
 type Timestamps = { id: string; created_at: string; updated_at: string };
 
+/** Definition config kinds: node/edge types plus the forms/workflow layer. */
+export type DefinitionKind = 'node' | 'edge' | 'form' | 'rubric' | 'workflow';
+
 export interface Database {
   public: {
     Tables: {
       definitions: {
-        Row: Timestamps & { kind: 'node' | 'edge'; key: string; label: string; config: Json };
-        Insert: { id?: string; created_at?: string; updated_at?: string; kind: 'node' | 'edge'; key: string; label: string; config?: Json };
+        Row: Timestamps & { kind: DefinitionKind; key: string; label: string; config: Json };
+        Insert: { id?: string; created_at?: string; updated_at?: string; kind: DefinitionKind; key: string; label: string; config?: Json };
         Update: Partial<Database['public']['Tables']['definitions']['Insert']>;
         Relationships: [];
       };
@@ -102,6 +105,31 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['for_you_views']['Insert']>;
         Relationships: [];
       };
+      documents: {
+        Row: Timestamps & {
+          node_id: string; filename: string; mime_type: string;
+          size_bytes: number; storage_path: string; text_content: string | null;
+        };
+        Insert: {
+          id?: string; created_at?: string; updated_at?: string;
+          node_id: string; filename: string; mime_type: string;
+          size_bytes: number; storage_path: string; text_content?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['documents']['Insert']>;
+        Relationships: [];
+      };
+      settings: {
+        Row: Timestamps & { key: string; value: Json };
+        Insert: { id?: string; created_at?: string; updated_at?: string; key: string; value: Json };
+        Update: Partial<Database['public']['Tables']['settings']['Insert']>;
+        Relationships: [];
+      };
+      counters: {
+        Row: Timestamps & { key: string; value: number };
+        Insert: { id?: string; created_at?: string; updated_at?: string; key: string; value?: number };
+        Update: Partial<Database['public']['Tables']['counters']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -137,6 +165,57 @@ export interface Database {
       get_subtree: {
         Args: { p_root: string };
         Returns: Database['public']['Tables']['nodes']['Row'][];
+      };
+      next_counter: { Args: { p_key: string }; Returns: number };
+      purge_nodes: { Args: { p_ids: string[] }; Returns: number };
+      claim_run_unit: {
+        Args: { p_id: string; p_step: number; p_sub: number };
+        Returns: string | null;
+      };
+      complete_run_unit: {
+        Args: {
+          p_id: string;
+          p_step: number;
+          p_sub: number;
+          p_token: string;
+          p_slot: string[];
+          p_output: Json;
+          p_merge: boolean;
+        };
+        Returns: number | null;
+      };
+      advance_run_step: {
+        Args: {
+          p_id: string;
+          p_from_step: number;
+          p_total_subs: number;
+          p_last_step: boolean;
+          p_change_note: string;
+        };
+        Returns: boolean;
+      };
+      fail_run_unit: {
+        Args: {
+          p_id: string;
+          p_step: number;
+          p_sub: number;
+          p_token: string;
+          p_error: string;
+          p_change_note: string;
+        };
+        Returns: boolean;
+      };
+      release_run_unit: {
+        Args: {
+          p_id: string;
+          p_step: number;
+          p_sub: number;
+          p_token: string;
+          p_max: number;
+          p_error: string;
+          p_change_note: string;
+        };
+        Returns: number | null;
       };
     };
     Enums: Record<never, never>;
@@ -243,4 +322,161 @@ export interface TabSpec {
   label?: string;
   hidden?: boolean;
   config?: Record<string, unknown>;
+}
+
+// ─── Forms / workflow layer (definitions kinds 'form' | 'rubric' | 'workflow')
+// See docs/workflow-forms-plan.md. All three are `config` jsonb shapes, read
+// whole, admin-edited. Retention semantics: WHOLE-node deletion policies —
+// anything that must outlive a submission is written onto the assessment node.
+
+export type RetentionMode = 'off' | 'days' | 'persist';
+export interface RetentionSetting {
+  mode: RetentionMode;
+  days?: number;
+}
+
+/** Kinds a public form can accept as uploads. All OOXML kinds are sniffed
+ *  inside the zip (never trusted from extension/MIME alone). */
+export type UploadKind = 'pdf' | 'docx' | 'pptx' | 'xlsx';
+
+/** Structured landing-page blocks rendered from a small code registry
+ *  (LandingBlocks component) — config chooses which blocks appear and what
+ *  they say; absent/empty = today's prose-only page. */
+export type LandingBlock =
+  | { type: 'prose'; markdown: string }
+  | {
+      type: 'verdictLegend';
+      /** Per-verdict copy; description falls back to wording derived from the
+       *  live verdict thresholds of the form's workflow. */
+      items?: { key: 'green' | 'amber' | 'red'; label?: string; description?: string }[];
+    }
+  | { type: 'steps'; items: { label: string; description?: string }[] }
+  | { type: 'stats'; items: { value: string; label: string }[] };
+
+/** Public intake form: creates nodes of `targetType` from anonymous submissions. */
+export interface FormConfig {
+  targetType: string;
+  /** Workflow definition key run after each submission. */
+  workflow?: string;
+  enabled: boolean;
+  /** Keys of target-type fields shown to the submitter. */
+  fields: string[];
+  /** Field key → literal or token template ({{submission_number}}, {{submission_date}}, {{form_key}}, …). */
+  presets: Record<string, string>;
+  /** Field keys the workflow copies onto the result node (lead/contact fields). */
+  carryOver?: string[];
+  uploads?: {
+    enabled: boolean;
+    accept: UploadKind[];
+    maxFiles: number;
+    minFiles?: number;
+    guidance?: string;
+  };
+  copy: {
+    title: string;
+    intro?: string;
+    submitLabel?: string;
+    /** Appended AFTER the auto-generated retention line. */
+    privacyNote?: string;
+    successNote?: string;
+    /** Structured blocks rendered between intro and the form; absent = intro only. */
+    blocks?: LandingBlock[];
+    /** Prominent page CTA on the public form page; absent = none (today). */
+    cta?: { label: string; href: string };
+  };
+  /** Per-form override of the app-wide retention settings. */
+  retention?: {
+    submission?: RetentionSetting;
+    assessment?: RetentionSetting;
+  };
+}
+
+export interface RubricControl {
+  key: string;
+  label: string;
+  description: string;
+  /** What good evidence looks like — guides both the LLM and the submitter. */
+  evidence?: string;
+  /** Verdict weighting; default 1. */
+  weight?: number;
+}
+
+export interface RubricPrinciple {
+  key: string;
+  label: string;
+  description?: string;
+  controls: RubricControl[];
+}
+
+export interface RubricRating {
+  key: string;
+  label: string;
+  /** Numeric contribution to coverage; null = excluded (e.g. not_applicable). */
+  score: number | null;
+  tone: ChoiceTone;
+  /** Customer-facing "next best step" line shown on the report score tile for this rating. */
+  guidance?: string;
+}
+
+export interface RubricConfig {
+  principles: RubricPrinciple[];
+  ratings: RubricRating[];
+}
+
+export interface ReportSection {
+  key: string;
+  title: string;
+  source: 'verdict' | 'findings' | 'coherence' | 'llm';
+  /** For source 'llm': plain-language composition prompt. */
+  prompt?: string;
+  maxItems?: number;
+  /** verdict source: 'tiles' renders the four counts as expandable cards
+   *  carrying each rating's `guidance` copy; default 'inline' (today's row).
+   *  findings source: 'tabs' renders one tab per rubric principle; default
+   *  stacked. */
+  display?: 'inline' | 'tiles' | 'tabs';
+  /** findings source: show control keys (F.3, …) next to each finding; default true. */
+  showControlIds?: boolean;
+  /** findings source: show per-principle "what this means for you" summaries; default false. */
+  showSummaries?: boolean;
+  /** Render the section body inside a collapsed <details>; default false. */
+  collapsed?: boolean;
+}
+
+export type WorkflowStep = {
+  /** Public status-page label override; falls back to the code STEP_LABELS map. */
+  label?: string;
+} & (
+  | { type: 'extract'; config?: Record<string, never> }
+  | { type: 'assess'; config: { rubric: string; prompt?: string } }
+  | { type: 'coherence'; config?: { prompt?: string } }
+  | { type: 'verdict'; config: { thresholds: { green: number; amber: number } } }
+  | { type: 'report'; config: { sections: ReportSection[] } }
+  | {
+      type: 'notify';
+      config: {
+        /** Submission field holding the recipient address. */
+        emailField?: string;
+        /** Token-templated ({{verdict_label}}, {{form_label}}, …). */
+        subject: string;
+        ctas: { label: string; href: string }[];
+      };
+    }
+);
+
+export interface WorkflowConfig {
+  /** Node type the pipeline produces (e.g. 'assessment'). */
+  resultType: string;
+  /** Anthropic model id; default claude-opus-4-8. */
+  model?: string;
+  /** Public status-page presentation; absent = today's minimal page (deploy ≠ change). */
+  status?: {
+    /** Renders "usually takes N–M minutes" copy; absent = today's generic line. */
+    expectedMinutes?: [number, number];
+    /** Render the stage list derived from `steps`; default false. */
+    showStages?: boolean;
+    /** Live sub-unit detail line ("Assessing principle 4 of 6 …"); default false. */
+    showDetail?: boolean;
+  };
+  steps: WorkflowStep[];
 }

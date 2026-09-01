@@ -1,6 +1,6 @@
 'use client';
 
-import { CSSProperties, ReactNode, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -9,26 +9,6 @@ export interface TabDef {
   label: string;
   content: ReactNode;
 }
-
-/** Shared tab-button styling — one source of truth for tabs app-wide. */
-function tabStyle(active: boolean): CSSProperties {
-  return {
-    fontSize: 11,
-    fontWeight: 500,
-    letterSpacing: '0.1em',
-    textTransform: 'uppercase',
-    padding: '11px 14px',
-    whiteSpace: 'nowrap',
-    color: active ? 'var(--ink)' : 'var(--muted)',
-    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-    marginBottom: -1,
-    background: 'transparent',
-    cursor: 'pointer',
-  };
-}
-
-const BAR = 'flex items-center gap-1 overflow-x-auto';
-const BAR_STYLE: CSSProperties = { borderBottom: '1px solid var(--line)' };
 
 /** In-page tabs that switch server-rendered content; active tab synced to ?tab=. */
 export function Tabs({ tabs }: { tabs: TabDef[] }) {
@@ -51,11 +31,18 @@ export function Tabs({ tabs }: { tabs: TabDef[] }) {
 
   return (
     <div>
-      <div className={`mt-6 ${BAR}`} style={BAR_STYLE} role="tablist">
+      <div className="tabs mt-6" role="tablist">
         {tabs.map((t) => {
           const on = t.key === (current?.key ?? '');
           return (
-            <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => select(t.key)} className="mono" style={tabStyle(on)}>
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => select(t.key)}
+              className={on ? 'active' : undefined}
+            >
               {t.label}
             </button>
           );
@@ -78,11 +65,11 @@ export function TabLinks({
 }) {
   const pathname = usePathname() ?? '';
   return (
-    <div className={`${className} ${BAR}`} style={BAR_STYLE}>
+    <div className={`tabs ${className}`}>
       {tabs.map((t) => {
         const on = pathname.startsWith(t.href);
         return (
-          <Link key={t.href} href={t.href} className="mono" style={tabStyle(on)}>
+          <Link key={t.href} href={t.href} className={on ? 'active' : undefined}>
             {t.label}
           </Link>
         );

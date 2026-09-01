@@ -1,7 +1,6 @@
 'use client';
 
 import { KeyboardEvent, useRef, useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/20/solid';
 
 /**
  * Chip/tag input for value lists (enum choices, scale labels, type keys).
@@ -90,7 +89,7 @@ export default function TagInput({
               onChange(value.filter((x) => x !== t));
             }}
           >
-            <XMarkIcon className="h-3 w-3" aria-hidden />
+            ✕
           </button>
         </span>
       ))}

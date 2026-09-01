@@ -12,5 +12,30 @@
   },
   "images": {
     "binding": "IMAGES"
+  },
+  // Hourly sweep: pump abandoned workflow runs + purge expired nodes
+  // (whole-node retention — docs/workflow-forms-plan.md §9).
+  "triggers": {
+    "crons": ["17 * * * *"]
+  },
+  // Per-IP rate limits for the public /d/* surface (worker-level; the app
+  // never sees these bindings). namespace_id is an arbitrary unique int.
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "SUBMIT_RATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 3, "period": 60 }
+      },
+      {
+        "name": "PUMP_RATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1002",
+        // 4 pump loops/tab at ~1.5s idle cadence ≈ 150 req/min; 300 leaves
+        // headroom for a second tab without feeding false "interrupted" UI.
+        "simple": { "limit": 300, "period": 60 }
+      }
+    ]
   }
 }

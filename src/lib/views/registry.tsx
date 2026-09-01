@@ -1,13 +1,3 @@
-import type { ComponentType, SVGProps } from 'react';
-import {
-  DocumentTextIcon,
-  RectangleStackIcon,
-  LinkIcon,
-  ClockIcon,
-  ViewColumnsIcon,
-  ShieldExclamationIcon,
-  CalendarDaysIcon,
-} from '@heroicons/react/24/outline';
 import type { DefinitionRow, ViewKind } from '@/lib/supabase/types';
 import { fieldsOf, nodeConfig, edgeConfig } from '@/lib/definitions/server';
 
@@ -30,7 +20,6 @@ export interface ViewMeta {
   kind: ViewKind;
   title: string;
   description: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
   scope: 'detail' | 'list' | 'both';
   /** Structural views are auto-derived; non-structural ones are user-added. */
   structural: boolean;
@@ -113,13 +102,13 @@ export function boardDefaults(
 // ── the catalog ──────────────────────────────────────────────────────────────
 
 export const VIEWS: ViewMeta[] = [
-  { kind: 'overview', title: 'Overview', description: 'The type’s own fields.', icon: DocumentTextIcon, scope: 'detail', structural: true, available: () => true },
-  { kind: 'children', title: 'Children', description: 'A child node type, as a containment tree.', icon: RectangleStackIcon, scope: 'detail', structural: true, available: (c) => childTypesOf(c.def, c.defs).length > 0 },
-  { kind: 'edge', title: 'Linked', description: 'Nodes linked via an edge type.', icon: LinkIcon, scope: 'detail', structural: true, available: (c) => edgeRelations(c.def, c.defs).length > 0 },
-  { kind: 'activity', title: 'Activity', description: 'Revision history.', icon: ClockIcon, scope: 'detail', structural: true, available: () => true },
-  { kind: 'board', title: 'Board', description: 'Kanban of a child type, grouped by a status field.', icon: ViewColumnsIcon, scope: 'both', structural: false, available: (c) => childHasEnum(c.def, c.defs) },
-  { kind: 'red', title: 'RED', description: 'Relevance·Extent·Duration mitigation scoring.', icon: ShieldExclamationIcon, scope: 'detail', structural: false, available: (c) => participatesInMitigates(c.def, c.defs) },
-  { kind: 'timeline', title: 'Timeline', description: 'A chronology — available when the type has a date field.', icon: CalendarDaysIcon, scope: 'detail', structural: false, available: (c) => hasDateField(c.def) },
+  { kind: 'overview', title: 'Overview', description: 'The type’s own fields.', scope: 'detail', structural: true, available: () => true },
+  { kind: 'children', title: 'Children', description: 'A child node type, as a containment tree.', scope: 'detail', structural: true, available: (c) => childTypesOf(c.def, c.defs).length > 0 },
+  { kind: 'edge', title: 'Linked', description: 'Nodes linked via an edge type.', scope: 'detail', structural: true, available: (c) => edgeRelations(c.def, c.defs).length > 0 },
+  { kind: 'activity', title: 'Activity', description: 'Revision history.', scope: 'detail', structural: true, available: () => true },
+  { kind: 'board', title: 'Board', description: 'Kanban of a child type, grouped by a status field.', scope: 'both', structural: false, available: (c) => childHasEnum(c.def, c.defs) },
+  { kind: 'red', title: 'RED', description: 'Relevance·Extent·Duration mitigation scoring.', scope: 'detail', structural: false, available: (c) => participatesInMitigates(c.def, c.defs) },
+  { kind: 'timeline', title: 'Timeline', description: 'A chronology — available when the type has a date field.', scope: 'detail', structural: false, available: (c) => hasDateField(c.def) },
 ];
 
 export const VIEW_BY_KIND: Record<ViewKind, ViewMeta> = Object.fromEntries(
